@@ -1,0 +1,66 @@
+# Environment variables
+.env
+.env.local
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
+
+# Temporary files
+*.tmp
+temp/
+
+# Migration data
+migration/data/*.json
+migration/*.json
+!migration/data/.gitkeep
+
+# Old/unused directories (GAS version)
+backend/
+cloudflare-worker/
+一括のコード/
+
+# Claude workspace
+.claude/
+
+# Old documentation (GAS version)
+API_REFERENCE.md
+CHANGES_SUMMARY.md
+DEPLOYMENT.md
+DEPLOYMENT_CHECKLIST.md
+DEPLOYMENT_WITH_CLOUDFLARE.md
+GITHUB_PAGES_MIGRATION.md
+IMPLEMENTATION_COMPLETE.md
+MENU_UPDATE_COMPLETE.md
+MIGRATION_GUIDE.md
+README.md
+ROLE_BASED_ACCESS.md
+SEO_BLOCKING_GUIDE.md
+SETUP_COMPLETE.md
+SUPABASE_MIGRATION_GUIDE.md
+修正概要.md
+編集報告システム_仕様書_完全版 (1).md
+
+# GAS specific files
+.clasp.json
+appsscript.json
+
+# Temporary/unknown files
+NDH6SA~M
