@@ -1612,7 +1612,9 @@ async function addUser(userData) {
       p_user_name: userData.name,
       p_email: userData.email,
       p_password: userData.password,
-      p_role: userData.role
+      p_role: userData.role,
+      p_is_editor: userData.is_editor || false,
+      p_is_admin: userData.is_admin || false
     });
 
     if (rpcError) {
