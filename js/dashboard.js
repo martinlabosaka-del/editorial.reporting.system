@@ -24,6 +24,17 @@ async function showDashboard() {
   const html = `
     <h2 class="section-title">ダッシュボード</h2>
 
+    <!-- エラー報告リンク -->
+    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px;">⚠️</span>
+      <div style="flex: 1;">
+        <strong style="color: #856404;">テスト運用中</strong>
+        <p style="margin: 4px 0 0 0; color: #856404; font-size: 14px;">
+          エラーや不具合がありましたら、<a href="https://docs.google.com/spreadsheets/d/1jm3EFLoZp4mibMuhrkgfnWujqOl-ZCrBpwqmqfoK-Vc/edit?usp=sharing" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline; font-weight: bold;">こちらのスプレッドシート</a>に記入をお願いします。
+        </p>
+      </div>
+    </div>
+
     <!-- サマリーカード -->
     <div id="dashboardSummary" class="dashboard-summary"></div>
 
