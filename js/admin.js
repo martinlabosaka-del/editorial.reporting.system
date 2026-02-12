@@ -292,10 +292,13 @@ async function showAdminScreen() {
         <div id="affiliation-list">
           ${adminMasterData.affiliations.length > 0 ?
             `<table class="results-table" style="margin-top: 0;">
-              <thead><tr><th>所属名</th></tr></thead>
+              <thead><tr><th>所属名</th><th style="width: 80px;">操作</th></tr></thead>
               <tbody>
                 ${adminMasterData.affiliations.map(a => `
-                  <tr><td>${escapeHtml(a.affiliation_name)}</td></tr>
+                  <tr>
+                    <td>${escapeHtml(a.affiliation_name)}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="handleDeleteAffiliation('${a.id}', '${escapeHtml(a.affiliation_name)}')">削除</button></td>
+                  </tr>
                 `).join('')}
               </tbody>
             </table>` :
@@ -312,10 +315,13 @@ async function showAdminScreen() {
         <div id="team-list">
           ${adminMasterData.teams.length > 0 ?
             `<table class="results-table" style="margin-top: 0;">
-              <thead><tr><th>チーム名</th></tr></thead>
+              <thead><tr><th>チーム名</th><th style="width: 80px;">操作</th></tr></thead>
               <tbody>
                 ${adminMasterData.teams.map(t => `
-                  <tr><td>${escapeHtml(t.team_name)}</td></tr>
+                  <tr>
+                    <td>${escapeHtml(t.team_name)}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="handleDeleteTeam('${t.id}', '${escapeHtml(t.team_name)}')">削除</button></td>
+                  </tr>
                 `).join('')}
               </tbody>
             </table>` :
@@ -396,6 +402,46 @@ async function handleAddTeam() {
   if (result.success) {
     showMessage('master-management-message', result.message, 'success');
     document.getElementById('new-team-name').value = '';
+    setTimeout(() => {
+      closeMasterManagement();
+      showAdminScreen();
+    }, 1000);
+  } else {
+    showMessage('master-management-message', result.message, 'error');
+  }
+}
+
+/**
+ * 所属削除処理
+ */
+async function handleDeleteAffiliation(id, name) {
+  if (!confirm(`所属「${name}」を削除しますか？`)) return;
+
+  showMessage('master-management-message', '削除中...', 'success');
+  const result = await deleteAffiliation(id);
+
+  if (result.success) {
+    showMessage('master-management-message', result.message, 'success');
+    setTimeout(() => {
+      closeMasterManagement();
+      showAdminScreen();
+    }, 1000);
+  } else {
+    showMessage('master-management-message', result.message, 'error');
+  }
+}
+
+/**
+ * チーム削除処理
+ */
+async function handleDeleteTeam(id, name) {
+  if (!confirm(`チーム「${name}」を削除しますか？`)) return;
+
+  showMessage('master-management-message', '削除中...', 'success');
+  const result = await deleteTeam(id);
+
+  if (result.success) {
+    showMessage('master-management-message', result.message, 'success');
     setTimeout(() => {
       closeMasterManagement();
       showAdminScreen();

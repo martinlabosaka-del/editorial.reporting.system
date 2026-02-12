@@ -416,6 +416,68 @@ async function addTeam(teamName) {
   }
 }
 
+/**
+ * 所属を削除
+ */
+async function deleteAffiliation(affiliationId) {
+  try {
+    // 使用中のユーザーがいるかチェック
+    const { data: usedBy } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('affiliation_id', affiliationId)
+      .limit(1);
+
+    if (usedBy && usedBy.length > 0) {
+      return { success: false, message: 'この所属はユーザーに使用されているため削除できません' };
+    }
+
+    const { error } = await supabase
+      .from('affiliations')
+      .delete()
+      .eq('id', affiliationId);
+
+    if (error) {
+      return handleSupabaseError(error, 'deleteAffiliation');
+    }
+
+    return createSuccessResponse(null, '所属を削除しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'deleteAffiliation');
+  }
+}
+
+/**
+ * チームを削除
+ */
+async function deleteTeam(teamId) {
+  try {
+    // 使用中のユーザーがいるかチェック
+    const { data: usedBy } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('team_id', teamId)
+      .limit(1);
+
+    if (usedBy && usedBy.length > 0) {
+      return { success: false, message: 'このチームはユーザーに使用されているため削除できません' };
+    }
+
+    const { error } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', teamId);
+
+    if (error) {
+      return handleSupabaseError(error, 'deleteTeam');
+    }
+
+    return createSuccessResponse(null, 'チームを削除しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'deleteTeam');
+  }
+}
+
 // ========================================
 // クライアント管理API
 // ========================================
