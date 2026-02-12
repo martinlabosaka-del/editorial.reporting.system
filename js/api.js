@@ -295,12 +295,125 @@ async function getEditItems() {
 }
 
 /**
- * 所属一覧取得（互換性のため）
- * 注：Supabase版では所属情報はusersテーブルに統合されています
+ * 所属一覧取得
  */
 async function getAffiliations() {
-  // 旧GAS版との互換性のため、空配列を返す
-  return createSuccessResponse([]);
+  try {
+    const { data, error } = await supabase
+      .from('affiliations')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order');
+
+    if (error) {
+      // テーブルが存在しない場合は空配列を返す
+      console.warn('getAffiliations error:', error);
+      return createSuccessResponse([]);
+    }
+
+    return createSuccessResponse(data);
+  } catch (error) {
+    return createSuccessResponse([]);
+  }
+}
+
+/**
+ * チーム一覧取得
+ */
+async function getTeams() {
+  try {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order');
+
+    if (error) {
+      console.warn('getTeams error:', error);
+      return createSuccessResponse([]);
+    }
+
+    return createSuccessResponse(data);
+  } catch (error) {
+    return createSuccessResponse([]);
+  }
+}
+
+/**
+ * 所属追加
+ */
+async function addAffiliation(affiliationName) {
+  try {
+    // affiliation_id生成
+    const { data: existing } = await supabase
+      .from('affiliations')
+      .select('affiliation_id')
+      .order('affiliation_id', { ascending: false })
+      .limit(1);
+
+    let newId;
+    if (existing && existing.length > 0) {
+      const lastNum = parseInt(existing[0].affiliation_id.replace('AFF-', ''));
+      newId = 'AFF-' + String(lastNum + 1).padStart(4, '0');
+    } else {
+      newId = 'AFF-0001';
+    }
+
+    const { data, error } = await supabase
+      .from('affiliations')
+      .insert({
+        affiliation_id: newId,
+        affiliation_name: affiliationName
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return handleSupabaseError(error, 'addAffiliation');
+    }
+
+    return createSuccessResponse(data, '所属を追加しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'addAffiliation');
+  }
+}
+
+/**
+ * チーム追加
+ */
+async function addTeam(teamName) {
+  try {
+    const { data: existing } = await supabase
+      .from('teams')
+      .select('team_id')
+      .order('team_id', { ascending: false })
+      .limit(1);
+
+    let newId;
+    if (existing && existing.length > 0) {
+      const lastNum = parseInt(existing[0].team_id.replace('TEAM-', ''));
+      newId = 'TEAM-' + String(lastNum + 1).padStart(4, '0');
+    } else {
+      newId = 'TEAM-0001';
+    }
+
+    const { data, error } = await supabase
+      .from('teams')
+      .insert({
+        team_id: newId,
+        team_name: teamName
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return handleSupabaseError(error, 'addTeam');
+    }
+
+    return createSuccessResponse(data, 'チームを追加しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'addTeam');
+  }
 }
 
 // ========================================
@@ -1694,14 +1807,25 @@ async function getAllUsers() {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        affiliation:affiliations(affiliation_id, affiliation_name),
+        team:teams(team_id, team_name)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
       return handleSupabaseError(error, 'getAllUsers');
     }
 
-    return createSuccessResponse(data);
+    // データ変換: リレーションデータをフラット化
+    const transformedData = (data || []).map(u => ({
+      ...u,
+      affiliation_name: u.affiliation?.affiliation_name || '',
+      team_name: u.team?.team_name || ''
+    }));
+
+    return createSuccessResponse(transformedData);
   } catch (error) {
     return handleSupabaseError(error, 'getAllUsers');
   }
@@ -1766,7 +1890,9 @@ async function updateUser(userId, userData) {
       role: userData.role,
       is_editor: userData.is_editor,
       is_admin: userData.is_admin,
-      is_active: userData.is_active
+      is_active: userData.is_active,
+      affiliation_id: userData.affiliation_id || null,
+      team_id: userData.team_id || null
     };
 
     const { data, error } = await supabase

@@ -10,21 +10,23 @@ let cachedMasterData = {
   technologies: [],
   estimateItems: [],
   editItems: [],
-  affiliations: []
+  affiliations: [],
+  teams: []
 };
 
 /**
  * マスタデータを読み込み
  */
 async function loadMasterData() {
-  const [clients, users, genres, techs, estimateItems, editItems, affiliations] = await Promise.all([
+  const [clients, users, genres, techs, estimateItems, editItems, affiliations, teams] = await Promise.all([
     getClients(),
     getUsers(),
     getGenres(),
     getTechnologies(),
     getEstimateItems(),
     getEditItems(),
-    getAffiliations()
+    getAffiliations(),
+    getTeams()
   ]);
 
   if (clients.success) cachedMasterData.clients = clients.data;
@@ -38,6 +40,7 @@ async function loadMasterData() {
   if (estimateItems.success) cachedMasterData.estimateItems = estimateItems.data;
   if (editItems.success) cachedMasterData.editItems = editItems.data;
   if (affiliations.success) cachedMasterData.affiliations = affiliations.data;
+  if (teams.success) cachedMasterData.teams = teams.data;
 
   return cachedMasterData;
 }

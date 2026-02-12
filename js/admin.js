@@ -2,6 +2,25 @@
 // 管理画面
 // ========================================
 
+// 管理画面用のマスタデータキャッシュ
+let adminMasterData = {
+  affiliations: [],
+  teams: []
+};
+
+/**
+ * 管理画面用マスタデータ読み込み
+ */
+async function loadAdminMasterData() {
+  const [affiliations, teams] = await Promise.all([
+    getAffiliations(),
+    getTeams()
+  ]);
+
+  if (affiliations.success) adminMasterData.affiliations = affiliations.data;
+  if (teams.success) adminMasterData.teams = teams.data;
+}
+
 /**
  * 管理画面表示
  */
@@ -22,7 +41,8 @@ async function showAdminScreen() {
 
   showLoading('admin-screen');
 
-  // 全ユーザーを取得
+  // マスタデータとユーザー一覧を並行取得
+  await loadAdminMasterData();
   const result = await getAllUsers();
 
   if (!result.success) {
@@ -39,53 +59,67 @@ async function showAdminScreen() {
     'executive': '役員'
   };
 
+  // 所属・チームのセレクトオプション生成
+  const affiliationOptions = adminMasterData.affiliations.map(a =>
+    `<option value="${a.id}">${escapeHtml(a.affiliation_name)}</option>`
+  ).join('');
+
+  const teamOptions = adminMasterData.teams.map(t =>
+    `<option value="${t.id}">${escapeHtml(t.team_name)}</option>`
+  ).join('');
+
   const html = `
     <div class="card">
       <h2>ユーザー管理</h2>
       ${createBackButton('showDashboard()')}
 
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 20px; display: flex; gap: 10px;">
         <button class="btn btn-primary" onclick="showAddUserModal()">+ 新規ユーザー追加</button>
+        <button class="btn btn-secondary" onclick="showMasterManagement()">所属・チーム管理</button>
       </div>
 
-      <table class="results-table">
-        <thead>
-          <tr>
-            <th>ユーザーID</th>
-            <th>名前</th>
-            <th>権限</th>
-            <th>編集者</th>
-            <th>管理者</th>
-            <th>ステータス</th>
-            <th>登録日</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${users.map(u => `
+      <div style="overflow-x: auto;">
+        <table class="results-table">
+          <thead>
             <tr>
-              <td>${escapeHtml(u.user_id)}</td>
-              <td>${escapeHtml(u.name)}</td>
-              <td>${roleLabels[u.role] || u.role}</td>
-              <td>${u.is_editor ? '✓' : ''}</td>
-              <td>${u.is_admin ? '✓' : ''}</td>
-              <td>
-                <span class="status-badge ${u.is_active ? 'status-active' : 'status-inactive'}">
-                  ${u.is_active ? '有効' : '無効'}
-                </span>
-              </td>
-              <td>${formatDate(u.created_at)}</td>
-              <td>
-                <button class="btn btn-secondary btn-sm" onclick="showEditUserModal('${u.user_id}')">編集</button>
-                <button class="btn btn-secondary btn-sm" onclick="showResetPasswordModal('${u.user_id}')">パスワード</button>
-                ${!u.is_admin || u.user_id !== user.user_id ?
-                  `<button class="btn btn-danger btn-sm" onclick="confirmDeleteUser('${u.user_id}')">無効化</button>` :
-                  ''}
-              </td>
+              <th>ユーザーID</th>
+              <th>名前</th>
+              <th>所属</th>
+              <th>チーム</th>
+              <th>権限</th>
+              <th>編集者</th>
+              <th>管理者</th>
+              <th>ステータス</th>
+              <th>操作</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${users.map(u => `
+              <tr>
+                <td>${escapeHtml(u.user_id)}</td>
+                <td>${escapeHtml(u.name)}</td>
+                <td>${escapeHtml(u.affiliation_name || '-')}</td>
+                <td>${escapeHtml(u.team_name || '-')}</td>
+                <td>${roleLabels[u.role] || u.role}</td>
+                <td>${u.is_editor ? '✓' : ''}</td>
+                <td>${u.is_admin ? '✓' : ''}</td>
+                <td>
+                  <span class="status-badge ${u.is_active ? 'status-active' : 'status-inactive'}">
+                    ${u.is_active ? '有効' : '無効'}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" onclick="showEditUserModal('${u.user_id}')">編集</button>
+                  <button class="btn btn-secondary btn-sm" onclick="showResetPasswordModal('${u.user_id}')">パスワード</button>
+                  ${!u.is_admin || u.user_id !== user.user_id ?
+                    `<button class="btn btn-danger btn-sm" onclick="confirmDeleteUser('${u.user_id}')">無効化</button>` :
+                    ''}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ユーザー追加モーダル -->
@@ -117,6 +151,20 @@ async function showAdminScreen() {
               <option value="staff">スタッフ</option>
               <option value="leader">リーダー</option>
               <option value="executive">役員</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>所属</label>
+            <select id="new-user-affiliation">
+              <option value="">選択してください</option>
+              ${affiliationOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>チーム</label>
+            <select id="new-user-team">
+              <option value="">選択してください</option>
+              ${teamOptions}
             </select>
           </div>
           <div class="form-group">
@@ -162,6 +210,20 @@ async function showAdminScreen() {
               <option value="staff">スタッフ</option>
               <option value="leader">リーダー</option>
               <option value="executive">役員</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>所属</label>
+            <select id="edit-user-affiliation">
+              <option value="">選択してください</option>
+              ${affiliationOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>チーム</label>
+            <select id="edit-user-team">
+              <option value="">選択してください</option>
+              ${teamOptions}
             </select>
           </div>
           <div class="form-group">
@@ -214,6 +276,59 @@ async function showAdminScreen() {
         </form>
       </div>
     </div>
+
+    <!-- 所属・チーム管理モーダル -->
+    <div id="master-management-modal" class="modal" style="display: none;">
+      <div class="modal-content" style="max-width: 700px;">
+        <span class="close" onclick="closeMasterManagement()">&times;</span>
+        <h2>所属・チーム管理</h2>
+
+        <!-- 所属管理 -->
+        <h3 style="margin-top: 20px; margin-bottom: 10px;">所属一覧</h3>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <input type="text" id="new-affiliation-name" placeholder="新しい所属名" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          <button type="button" class="btn btn-primary" onclick="handleAddAffiliation()">追加</button>
+        </div>
+        <div id="affiliation-list">
+          ${adminMasterData.affiliations.length > 0 ?
+            `<table class="results-table" style="margin-top: 0;">
+              <thead><tr><th>所属名</th></tr></thead>
+              <tbody>
+                ${adminMasterData.affiliations.map(a => `
+                  <tr><td>${escapeHtml(a.affiliation_name)}</td></tr>
+                `).join('')}
+              </tbody>
+            </table>` :
+            '<p style="color: #999;">所属が登録されていません</p>'
+          }
+        </div>
+
+        <!-- チーム管理 -->
+        <h3 style="margin-top: 25px; margin-bottom: 10px;">チーム一覧</h3>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <input type="text" id="new-team-name" placeholder="新しいチーム名" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          <button type="button" class="btn btn-primary" onclick="handleAddTeam()">追加</button>
+        </div>
+        <div id="team-list">
+          ${adminMasterData.teams.length > 0 ?
+            `<table class="results-table" style="margin-top: 0;">
+              <thead><tr><th>チーム名</th></tr></thead>
+              <tbody>
+                ${adminMasterData.teams.map(t => `
+                  <tr><td>${escapeHtml(t.team_name)}</td></tr>
+                `).join('')}
+              </tbody>
+            </table>` :
+            '<p style="color: #999;">チームが登録されていません</p>'
+          }
+        </div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="closeMasterManagement()">閉じる</button>
+        </div>
+        <div id="master-management-message"></div>
+      </div>
+    </div>
   `;
 
   screen.innerHTML = html;
@@ -222,6 +337,72 @@ async function showAdminScreen() {
   document.getElementById('add-user-form').onsubmit = handleAddUser;
   document.getElementById('edit-user-form').onsubmit = handleEditUser;
   document.getElementById('reset-password-form').onsubmit = handleResetPassword;
+}
+
+/**
+ * 所属・チーム管理モーダル表示
+ */
+function showMasterManagement() {
+  document.getElementById('master-management-modal').style.display = 'block';
+  document.getElementById('master-management-message').innerHTML = '';
+}
+
+/**
+ * 所属・チーム管理モーダル閉じる
+ */
+function closeMasterManagement() {
+  document.getElementById('master-management-modal').style.display = 'none';
+}
+
+/**
+ * 所属追加処理
+ */
+async function handleAddAffiliation() {
+  const name = document.getElementById('new-affiliation-name').value.trim();
+  if (!name) {
+    showMessage('master-management-message', '所属名を入力してください', 'error');
+    return;
+  }
+
+  showMessage('master-management-message', '追加中...', 'success');
+  const result = await addAffiliation(name);
+
+  if (result.success) {
+    showMessage('master-management-message', result.message, 'success');
+    document.getElementById('new-affiliation-name').value = '';
+    // 画面を再読み込みして反映
+    setTimeout(() => {
+      closeMasterManagement();
+      showAdminScreen();
+    }, 1000);
+  } else {
+    showMessage('master-management-message', result.message, 'error');
+  }
+}
+
+/**
+ * チーム追加処理
+ */
+async function handleAddTeam() {
+  const name = document.getElementById('new-team-name').value.trim();
+  if (!name) {
+    showMessage('master-management-message', 'チーム名を入力してください', 'error');
+    return;
+  }
+
+  showMessage('master-management-message', '追加中...', 'success');
+  const result = await addTeam(name);
+
+  if (result.success) {
+    showMessage('master-management-message', result.message, 'success');
+    document.getElementById('new-team-name').value = '';
+    setTimeout(() => {
+      closeMasterManagement();
+      showAdminScreen();
+    }, 1000);
+  } else {
+    showMessage('master-management-message', result.message, 'error');
+  }
 }
 
 /**
@@ -256,11 +437,27 @@ async function handleAddUser(e) {
     is_admin: document.getElementById('new-user-is-admin').checked
   };
 
+  const affiliationId = document.getElementById('new-user-affiliation').value;
+  const teamId = document.getElementById('new-user-team').value;
+
   showMessage('add-user-message', '登録中...', 'success');
 
   const result = await addUser(userData);
 
   if (result.success) {
+    // ユーザー登録後に所属・チームを更新
+    if (affiliationId || teamId) {
+      await updateUser(userData.user_id, {
+        name: userData.name,
+        role: userData.role,
+        is_editor: userData.is_editor,
+        is_admin: userData.is_admin,
+        is_active: true,
+        affiliation_id: affiliationId || null,
+        team_id: teamId || null
+      });
+    }
+
     showMessage('add-user-message', result.message, 'success');
     setTimeout(() => {
       closeAddUserModal();
@@ -291,6 +488,8 @@ async function showEditUserModal(userId) {
   document.getElementById('edit-user-id-display').value = user.user_id;
   document.getElementById('edit-user-name').value = user.name;
   document.getElementById('edit-user-role').value = user.role;
+  document.getElementById('edit-user-affiliation').value = user.affiliation_id || '';
+  document.getElementById('edit-user-team').value = user.team_id || '';
   document.getElementById('edit-user-is-editor').checked = user.is_editor || false;
   document.getElementById('edit-user-is-admin').checked = user.is_admin;
   document.getElementById('edit-user-is-active').checked = user.is_active;
@@ -318,7 +517,9 @@ async function handleEditUser(e) {
     role: document.getElementById('edit-user-role').value,
     is_editor: document.getElementById('edit-user-is-editor').checked,
     is_admin: document.getElementById('edit-user-is-admin').checked,
-    is_active: document.getElementById('edit-user-is-active').checked
+    is_active: document.getElementById('edit-user-is-active').checked,
+    affiliation_id: document.getElementById('edit-user-affiliation').value || null,
+    team_id: document.getElementById('edit-user-team').value || null
   };
 
   showMessage('edit-user-message', '更新中...', 'success');
