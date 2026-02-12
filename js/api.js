@@ -354,6 +354,118 @@ async function addClient(clientName, agencyName) {
   }
 }
 
+/**
+ * クライアント情報更新
+ */
+async function updateClientInfo(clientId, clientName, agencyName) {
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .update({
+        client_name: clientName,
+        agency_name: agencyName
+      })
+      .eq('client_id', clientId)
+      .select()
+      .single();
+
+    if (error) {
+      return handleSupabaseError(error, 'updateClientInfo');
+    }
+
+    return createSuccessResponse(data, 'クライアント情報を更新しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'updateClientInfo');
+  }
+}
+
+/**
+ * 案件の重複チェック（同一クライアント・同一案件名）
+ */
+async function checkDuplicateProject(clientId, projectName) {
+  try {
+    // client_idがテキスト形式の場合、UUIDに変換
+    let clientUuid = clientId;
+    if (clientId && typeof clientId === 'string' && !clientId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('client_id', clientId)
+        .single();
+      if (client) clientUuid = client.id;
+    }
+
+    const { data, error } = await supabase
+      .from('projects')
+      .select('project_id')
+      .eq('client_id', clientUuid)
+      .eq('project_name', projectName);
+
+    if (error) return { success: true, isDuplicate: false };
+
+    return { success: true, isDuplicate: data && data.length > 0 };
+  } catch (error) {
+    return { success: true, isDuplicate: false };
+  }
+}
+
+/**
+ * 案件削除（下書きのみ）
+ */
+async function deleteProject(projectId) {
+  try {
+    const user = getCurrentUser();
+    if (!user) {
+      return { success: false, message: 'ユーザー情報が取得できません' };
+    }
+
+    // project_idからプロジェクト情報を取得
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id, status, main_editor, estimate_pdf_url')
+      .eq('project_id', projectId)
+      .single();
+
+    if (projectError || !project) {
+      return { success: false, message: '案件が見つかりません' };
+    }
+
+    // ステータスチェック（下書きのみ削除可能）
+    if (project.status !== 'draft') {
+      return { success: false, message: '下書き状態の案件のみ削除できます' };
+    }
+
+    // 権限チェック（メイン編集者または管理者のみ）
+    if (project.main_editor !== user.id && !user.is_admin) {
+      return { success: false, message: '削除権限がありません' };
+    }
+
+    // 関連データの削除
+    await supabase.from('estimate_breakdown').delete().eq('project_id', project.id);
+    await supabase.from('edit_history').delete().eq('project_id', project.id);
+    await supabase.from('completed_urls').delete().eq('project_id', project.id);
+
+    // PDFの削除
+    if (project.estimate_pdf_url) {
+      await deletePdfFromStorage(project.estimate_pdf_url);
+    }
+
+    // プロジェクト本体の削除
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', project.id);
+
+    if (deleteError) {
+      return handleSupabaseError(deleteError, 'deleteProject');
+    }
+
+    return createSuccessResponse(null, '案件を削除しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'deleteProject');
+  }
+}
+
 // ========================================
 // ファイルアップロードAPI
 // ========================================

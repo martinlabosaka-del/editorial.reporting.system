@@ -69,6 +69,7 @@ async function showProjectRegistration() {
               ${createSelectOptions(cachedMasterData.clients, 'client_id', 'client_name')}
             </select>
             <button type="button" class="btn btn-secondary" onclick="showAddClientModal()">新規追加</button>
+            <button type="button" class="btn btn-secondary" onclick="showEditClientModal()">名前修正</button>
           </div>
         </div>
 
@@ -189,6 +190,29 @@ async function showProjectRegistration() {
         <div id="add-client-message"></div>
       </div>
     </div>
+
+    <!-- クライアント編集モーダル -->
+    <div id="edit-client-modal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeEditClientModal()">&times;</span>
+        <h2>クライアント情報修正</h2>
+        <form id="edit-client-form">
+          <div class="form-group">
+            <label>クライアント名 <span style="color: red;">*</span></label>
+            <input type="text" id="edit-client-name" required>
+          </div>
+          <div class="form-group">
+            <label>代理店名</label>
+            <input type="text" id="edit-client-agency-name">
+          </div>
+          <div class="btn-group">
+            <button type="submit" class="btn btn-primary">更新</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditClientModal()">キャンセル</button>
+          </div>
+        </form>
+        <div id="edit-client-message"></div>
+      </div>
+    </div>
   `;
 
   screen.innerHTML = html;
@@ -203,6 +227,12 @@ async function showProjectRegistration() {
   document.getElementById('add-client-form').onsubmit = async function(e) {
     e.preventDefault();
     await handleAddClient();
+    return false;
+  };
+
+  document.getElementById('edit-client-form').onsubmit = async function(e) {
+    e.preventDefault();
+    await handleEditClient();
     return false;
   };
 
@@ -275,6 +305,14 @@ async function handleProjectSubmit() {
 
   if (!clientId || !projectName) {
     showMessage('project-reg-message', '必須項目を入力してください', 'error');
+    return;
+  }
+
+  // 重複チェック（同じクライアント・同じ案件名）
+  showMessage('project-reg-message', '重複チェック中...', 'success');
+  const dupCheck = await checkDuplicateProject(clientId, projectName);
+  if (dupCheck.isDuplicate) {
+    showMessage('project-reg-message', '同じクライアント・同じ案件名の案件が既に登録されています。', 'error');
     return;
   }
 
@@ -363,6 +401,81 @@ function closeAddClientModal() {
 }
 
 /**
+ * クライアント編集モーダル表示
+ */
+function showEditClientModal() {
+  const clientSelect = document.getElementById('client-id');
+  const selectedClientId = clientSelect.value;
+
+  if (!selectedClientId) {
+    alert('編集するクライアントを選択してください');
+    return;
+  }
+
+  const client = cachedMasterData.clients.find(c => c.client_id === selectedClientId);
+  if (!client) {
+    alert('クライアント情報が見つかりません');
+    return;
+  }
+
+  document.getElementById('edit-client-name').value = client.client_name;
+  document.getElementById('edit-client-agency-name').value = client.agency_name || '';
+  document.getElementById('edit-client-modal').style.display = 'block';
+  document.getElementById('edit-client-message').innerHTML = '';
+}
+
+/**
+ * クライアント編集モーダル閉じる
+ */
+function closeEditClientModal() {
+  document.getElementById('edit-client-modal').style.display = 'none';
+  document.getElementById('edit-client-form').reset();
+  document.getElementById('edit-client-message').innerHTML = '';
+}
+
+/**
+ * クライアント編集処理
+ */
+async function handleEditClient() {
+  const clientSelect = document.getElementById('client-id');
+  const selectedClientId = clientSelect.value;
+  const newClientName = document.getElementById('edit-client-name').value;
+  const newAgencyName = document.getElementById('edit-client-agency-name').value;
+
+  if (!newClientName) {
+    showMessage('edit-client-message', 'クライアント名を入力してください', 'error');
+    return;
+  }
+
+  showMessage('edit-client-message', '更新中...', 'success');
+
+  const result = await updateClientInfo(selectedClientId, newClientName, newAgencyName);
+
+  if (result.success) {
+    showMessage('edit-client-message', result.message, 'success');
+
+    // キャッシュ更新
+    const clientIndex = cachedMasterData.clients.findIndex(c => c.client_id === selectedClientId);
+    if (clientIndex >= 0) {
+      cachedMasterData.clients[clientIndex].client_name = newClientName;
+      cachedMasterData.clients[clientIndex].agency_name = newAgencyName;
+    }
+
+    // セレクトボックスの表示名を更新
+    const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+    if (selectedOption) {
+      selectedOption.textContent = newClientName;
+    }
+
+    setTimeout(() => {
+      closeEditClientModal();
+    }, 1000);
+  } else {
+    showMessage('edit-client-message', result.message, 'error');
+  }
+}
+
+/**
  * クライアント追加処理
  */
 async function handleAddClient() {
@@ -380,15 +493,20 @@ async function handleAddClient() {
 
   if (result.success) {
     showMessage('add-client-message', result.message, 'success');
-    cachedMasterData.clients.push(result.client);
+    cachedMasterData.clients.push(result.data);
 
     // セレクトボックスに追加
     const clientSelect = document.getElementById('client-id');
     const option = document.createElement('option');
-    option.value = result.client.client_id;
-    option.textContent = result.client.client_name;
+    option.value = result.data.client_id;
+    option.textContent = result.data.client_name;
     option.selected = true;
     clientSelect.appendChild(option);
+
+    // 代理店名を自動入力
+    if (result.data.agency_name) {
+      document.getElementById('agency-name').value = result.data.agency_name;
+    }
 
     setTimeout(() => {
       closeAddClientModal();
@@ -629,7 +747,11 @@ async function showProjectDetail(projectId) {
   const canEdit = (project.status === 'draft' || (project.status === 'rejected' && project.leader_rejection_reason)) &&
                   project.main_editor_id === user.user_id;
 
+  const canDelete = project.status === 'draft' &&
+                    (project.main_editor_id === user.user_id || user.is_admin);
+
   console.log('canEdit:', canEdit);
+  console.log('canDelete:', canDelete);
 
   // ジャンルと使用技術の表示
   const genresDisplay = project.genres_names && project.genres_names.length > 0
@@ -880,11 +1002,37 @@ async function showProjectDetail(projectId) {
         ` : ''}
         <button class="btn btn-secondary" onclick="showProjectSearch()">案件検索に戻る</button>
         <button class="btn btn-secondary" onclick="showDashboard()">TOPに戻る</button>
+        ${canDelete ? `
+          <button class="btn btn-danger" onclick="confirmDeleteProject('${project.project_id}')" style="margin-left: auto;">案件削除</button>
+        ` : ''}
       </div>
     </div>
   `;
 
   screen.innerHTML = html;
+}
+
+/**
+ * 案件削除確認
+ */
+function confirmDeleteProject(projectId) {
+  if (confirm('この案件を削除しますか？\n削除すると元に戻すことはできません。')) {
+    handleDeleteProject(projectId);
+  }
+}
+
+/**
+ * 案件削除処理
+ */
+async function handleDeleteProject(projectId) {
+  const result = await deleteProject(projectId);
+
+  if (result.success) {
+    alert('案件を削除しました');
+    showDashboard();
+  } else {
+    alert('削除に失敗しました: ' + result.message);
+  }
 }
 
 /**
