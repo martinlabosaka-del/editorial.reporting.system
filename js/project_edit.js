@@ -170,12 +170,12 @@ async function showProjectEditScreen(projectId) {
         <!-- 進捗マイルストーン -->
         <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
         <div id="edit-milestones-header" style="display:flex;gap:10px;margin-bottom:6px;align-items:center;font-size:12px;font-weight:bold;color:#666;">
-          <span style="min-width:140px;">工程</span>
-          <span style="min-width:70px;">番号</span>
+          <span style="min-width:60px;">順序</span>
+          <span style="min-width:70px;">回数</span>
+          <span style="min-width:280px;">工程</span>
+          <span id="milestone-reviewer-header" style="min-width:140px;">確認者</span>
           <span style="min-width:140px;">予定日</span>
           <span style="min-width:140px;">完了日</span>
-          <span id="milestone-reviewer-header" style="min-width:140px;">確認者</span>
-          <span style="min-width:60px;">順序</span>
           <span style="min-width:50px;"></span>
         </div>
         <div id="edit-milestones-list"></div>
@@ -387,22 +387,22 @@ function addEditMilestoneRow(data = null) {
   const showReviewer = isReviewType ? '' : 'visibility:hidden;';
 
   row.innerHTML = `
-    <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="min-width:140px;">
-      ${typeOptions}
-    </select>
-    <select class="milestone-number" style="min-width:70px;">
-      ${numberOptions}
-    </select>
-    <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="min-width:120px;${showCustom}">
-    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;">
-    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;">
-    <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
-      ${reviewerOptions}
-    </select>
     <span style="display:flex;gap:2px;min-width:60px;">
       <button type="button" class="btn btn-sm" style="padding:2px 6px;font-size:14px;" onclick="moveMilestoneRow(this, -1)">↑</button>
       <button type="button" class="btn btn-sm" style="padding:2px 6px;font-size:14px;" onclick="moveMilestoneRow(this, 1)">↓</button>
     </span>
+    <select class="milestone-number" style="min-width:70px;">
+      ${numberOptions}
+    </select>
+    <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="min-width:280px;">
+      ${typeOptions}
+    </select>
+    <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="min-width:120px;${showCustom}">
+    <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
+      ${reviewerOptions}
+    </select>
+    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;">
+    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;">
     <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
   `;
 
