@@ -395,10 +395,12 @@ function addEditMilestoneRow(data = null) {
     <select class="milestone-number" style="min-width:70px;">
       ${numberOptions}
     </select>
-    <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="min-width:280px;">
-      ${typeOptions}
-    </select>
-    <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="min-width:120px;${showCustom}">
+    <span class="milestone-type-container" style="display:flex;gap:4px;min-width:280px;width:280px;">
+      <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="flex:1;">
+        ${typeOptions}
+      </select>
+      <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="flex:1;${showCustom}">
+    </span>
     <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
       ${reviewerOptions}
     </select>
