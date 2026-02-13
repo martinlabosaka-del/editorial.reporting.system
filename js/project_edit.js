@@ -175,6 +175,7 @@ async function showProjectEditScreen(projectId) {
           <span style="min-width:140px;">予定日</span>
           <span style="min-width:140px;">完了日</span>
           <span id="milestone-reviewer-header" style="min-width:140px;">確認者</span>
+          <span style="min-width:60px;">順序</span>
           <span style="min-width:50px;"></span>
         </div>
         <div id="edit-milestones-list"></div>
@@ -398,6 +399,10 @@ function addEditMilestoneRow(data = null) {
     <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
       ${reviewerOptions}
     </select>
+    <span style="display:flex;gap:2px;min-width:60px;">
+      <button type="button" class="btn btn-sm" style="padding:2px 6px;font-size:14px;" onclick="moveMilestoneRow(this, -1)">↑</button>
+      <button type="button" class="btn btn-sm" style="padding:2px 6px;font-size:14px;" onclick="moveMilestoneRow(this, 1)">↓</button>
+    </span>
     <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
   `;
 
@@ -414,6 +419,21 @@ function onMilestoneTypeChange(select) {
 
   customInput.style.display = select.value === 'other' ? '' : 'none';
   reviewerSelect.style.visibility = select.value === '社内確認' ? '' : 'hidden';
+}
+
+/**
+ * マイルストーン行の順番を入れ替え
+ * @param {HTMLElement} btn - クリックされたボタン
+ * @param {number} direction - -1: 上へ, 1: 下へ
+ */
+function moveMilestoneRow(btn, direction) {
+  const row = btn.closest('.milestone-edit-row');
+  const container = document.getElementById('edit-milestones-list');
+  if (direction === -1 && row.previousElementSibling) {
+    container.insertBefore(row, row.previousElementSibling);
+  } else if (direction === 1 && row.nextElementSibling) {
+    container.insertBefore(row.nextElementSibling, row);
+  }
 }
 
 /**
