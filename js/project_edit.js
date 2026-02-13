@@ -14,7 +14,10 @@ async function showProjectEditScreen(projectId) {
 
   // マスタデータとプロジェクトデータを読み込み
   await loadMasterData();
-  const result = await getProjectDetail(projectId);
+  const [result, milestonesResult] = await Promise.all([
+    getProjectDetail(projectId),
+    getProjectMilestones(projectId)
+  ]);
 
   if (!result.success) {
     showError('project-edit-screen', result.message);
@@ -22,6 +25,7 @@ async function showProjectEditScreen(projectId) {
   }
 
   const project = result.data;
+  const milestones = milestonesResult.success ? milestonesResult.data : [];
   currentEditingProject = project; // プロジェクトデータを保存
 
   const html = `
@@ -68,6 +72,11 @@ async function showProjectEditScreen(projectId) {
             <input type="date" id="edit-actual-delivery-date" value="${project.actual_delivery_date || ''}">
           </div>
         </div>
+
+        <!-- 進捗マイルストーン -->
+        <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
+        <div id="edit-milestones-list"></div>
+        <button type="button" class="add-row-btn" onclick="addEditMilestoneRow()">+ 工程追加</button>
 
         <!-- 担当者 -->
         <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">担当者</h3>
@@ -234,6 +243,13 @@ async function showProjectEditScreen(projectId) {
 
   screen.innerHTML = html;
 
+  // マイルストーンを復元
+  if (milestones.length > 0) {
+    milestones.forEach(m => {
+      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '' });
+    });
+  }
+
   // 見積内訳を復元
   if (project.estimate_breakdown && project.estimate_breakdown.length > 0) {
     project.estimate_breakdown.forEach(item => {
@@ -270,6 +286,25 @@ async function showProjectEditScreen(projectId) {
   window.currentProjectActualMinutes = actualMinutes;
 
   calculateEditEstimateTotal();
+}
+
+/**
+ * マイルストーン行追加（編集画面用）
+ */
+function addEditMilestoneRow(data = null) {
+  const container = document.getElementById('edit-milestones-list');
+  const row = document.createElement('div');
+  row.className = 'milestone-edit-row';
+  row.style.cssText = 'display: grid; grid-template-columns: 1fr 150px 150px 60px; gap: 10px; margin-bottom: 8px; align-items: center;';
+
+  row.innerHTML = `
+    <input type="text" class="milestone-name" placeholder="工程名（例：白パケ、社内確認）" value="${data ? escapeHtml(data.name) : ''}">
+    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}">
+    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" placeholder="完了日" title="完了日（空欄なら未完了）">
+    <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
+  `;
+
+  container.appendChild(row);
 }
 
 /**
@@ -570,9 +605,24 @@ async function saveProjectEdit() {
     projectData.pdf_file = pdfFile;
   }
 
+  // マイルストーン
+  const milestoneRows = document.querySelectorAll('#edit-milestones-list .milestone-edit-row');
+  const milestones = [];
+  milestoneRows.forEach(row => {
+    const name = row.querySelector('.milestone-name').value.trim();
+    const plannedDate = row.querySelector('.milestone-planned-date').value;
+    const completedDate = row.querySelector('.milestone-completed-date').value;
+    if (name) {
+      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate });
+    }
+  });
+
   showLoading('project-edit-screen');
 
-  const result = await updateProject(projectData);
+  const [result, milestoneResult] = await Promise.all([
+    updateProject(projectData),
+    saveProjectMilestones(projectId, milestones)
+  ]);
 
   if (result.success) {
     alert('案件を保存しました。');

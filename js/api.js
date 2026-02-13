@@ -479,6 +479,124 @@ async function deleteTeam(teamId) {
 }
 
 // ========================================
+// マイルストーン管理API
+// ========================================
+
+/**
+ * 案件のマイルストーン一覧取得
+ */
+async function getProjectMilestones(projectId) {
+  try {
+    // TEXT形式のproject_idからUUIDを取得
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('project_id', projectId)
+      .single();
+
+    if (!project) {
+      return createSuccessResponse([], 'マイルストーンなし');
+    }
+
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      return handleSupabaseError(error, 'getProjectMilestones');
+    }
+
+    return createSuccessResponse(data || [], 'マイルストーン取得成功');
+  } catch (error) {
+    return handleSupabaseError(error, 'getProjectMilestones');
+  }
+}
+
+/**
+ * マイルストーン一括保存（delete + re-insert）
+ */
+async function saveProjectMilestones(projectId, milestones) {
+  try {
+    // TEXT形式のproject_idからUUIDを取得
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('project_id', projectId)
+      .single();
+
+    if (!project) {
+      return { success: false, message: '案件が見つかりません' };
+    }
+
+    // 既存を削除
+    await supabase
+      .from('project_milestones')
+      .delete()
+      .eq('project_id', project.id);
+
+    // 新しいデータを挿入
+    if (milestones.length > 0) {
+      const rows = milestones.map((m, index) => ({
+        project_id: project.id,
+        milestone_name: m.milestone_name,
+        planned_date: m.planned_date || null,
+        completed_date: m.completed_date || null,
+        display_order: index
+      }));
+
+      const { error } = await supabase
+        .from('project_milestones')
+        .insert(rows);
+
+      if (error) {
+        return handleSupabaseError(error, 'saveProjectMilestones');
+      }
+    }
+
+    return createSuccessResponse(null, 'マイルストーンを保存しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'saveProjectMilestones');
+  }
+}
+
+/**
+ * マイルストーンの完了/未完了をトグル
+ */
+async function toggleMilestoneComplete(milestoneId) {
+  try {
+    // 現在の状態を取得
+    const { data: milestone, error: fetchError } = await supabase
+      .from('project_milestones')
+      .select('completed_date')
+      .eq('id', milestoneId)
+      .single();
+
+    if (fetchError) {
+      return handleSupabaseError(fetchError, 'toggleMilestoneComplete');
+    }
+
+    const newDate = milestone.completed_date ? null : new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .update({ completed_date: newDate })
+      .eq('id', milestoneId)
+      .select()
+      .single();
+
+    if (error) {
+      return handleSupabaseError(error, 'toggleMilestoneComplete');
+    }
+
+    return createSuccessResponse(data, newDate ? '完了にしました' : '未完了に戻しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'toggleMilestoneComplete');
+  }
+}
+
+// ========================================
 // クライアント管理API
 // ========================================
 

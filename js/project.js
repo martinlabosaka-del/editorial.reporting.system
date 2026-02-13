@@ -723,6 +723,89 @@ function renderProjectSearchResults(projects) {
 /**
  * 案件詳細画面表示
  */
+/**
+ * マイルストーンセクションHTML生成
+ */
+function buildMilestoneSection(milestones, projectId) {
+  if (!milestones || milestones.length === 0) return '';
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // ステッパーバー
+  const stepperHtml = milestones.map((m, i) => {
+    let stepClass = 'milestone-upcoming';
+    if (m.completed_date) {
+      stepClass = 'milestone-completed';
+    } else if (m.planned_date && m.planned_date < today) {
+      stepClass = 'milestone-overdue';
+    }
+    const line = i > 0 ? '<div class="milestone-line"></div>' : '';
+    const nodeContent = m.completed_date ? '✓' : (i + 1);
+    return `
+      <div class="milestone-step ${stepClass}">
+        ${line}
+        <div class="milestone-node" onclick="handleToggleMilestone('${m.id}', '${projectId}')" title="クリックで完了/未完了を切替">
+          ${nodeContent}
+        </div>
+        <div class="milestone-label">${escapeHtml(m.milestone_name)}</div>
+        <div class="milestone-date">${m.planned_date || '-'}</div>
+      </div>
+    `;
+  }).join('');
+
+  // テーブル行
+  const tableRows = milestones.map(m => {
+    let statusBadge = '<span class="status-badge" style="background:#e0e0e0;color:#666;">予定</span>';
+    if (m.completed_date) {
+      statusBadge = '<span class="status-badge" style="background:#d4edda;color:#155724;">完了</span>';
+    } else if (m.planned_date && m.planned_date < today) {
+      statusBadge = '<span class="status-badge" style="background:#f8d7da;color:#721c24;">遅延</span>';
+    }
+    const btnClass = m.completed_date ? 'btn-secondary' : 'btn-primary';
+    const btnLabel = m.completed_date ? '取消' : '完了にする';
+    return `
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding:10px;">${escapeHtml(m.milestone_name)}</td>
+        <td style="padding:10px;text-align:center;">${m.planned_date || '-'}</td>
+        <td style="padding:10px;text-align:center;">${m.completed_date || '-'}</td>
+        <td style="padding:10px;text-align:center;">${statusBadge}</td>
+        <td style="padding:10px;text-align:center;">
+          <button class="btn btn-sm ${btnClass}" onclick="handleToggleMilestone('${m.id}', '${projectId}')">${btnLabel}</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
+    <div class="milestone-stepper">${stepperHtml}</div>
+    <table style="width:100%;border-collapse:collapse;margin-top:15px;">
+      <thead>
+        <tr style="background:#f5f5f5;border-bottom:2px solid #ddd;">
+          <th style="padding:10px;text-align:left;">工程</th>
+          <th style="padding:10px;text-align:center;">予定日</th>
+          <th style="padding:10px;text-align:center;">完了日</th>
+          <th style="padding:10px;text-align:center;">状態</th>
+          <th style="padding:10px;text-align:center;">操作</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  `;
+}
+
+/**
+ * マイルストーン完了トグル処理
+ */
+async function handleToggleMilestone(milestoneId, projectId) {
+  const result = await toggleMilestoneComplete(milestoneId);
+  if (result.success) {
+    showProjectDetail(projectId);
+  } else {
+    alert(result.message);
+  }
+}
+
 async function showProjectDetail(projectId) {
   hideAllScreens();
   const screen = document.getElementById('project-detail-screen');
@@ -731,7 +814,10 @@ async function showProjectDetail(projectId) {
 
   showLoading('project-detail-screen');
 
-  const result = await getProjectDetail(projectId);
+  const [result, milestonesResult] = await Promise.all([
+    getProjectDetail(projectId),
+    getProjectMilestones(projectId)
+  ]);
 
   if (!result.success) {
     showError('project-detail-screen', result.message);
@@ -739,6 +825,7 @@ async function showProjectDetail(projectId) {
   }
 
   const project = result.data;
+  const milestones = milestonesResult.success ? milestonesResult.data : [];
   const user = getCurrentUser();
 
   // 編集・申請ボタンの表示条件
@@ -816,6 +903,9 @@ async function showProjectDetail(projectId) {
           <p>${project.actual_delivery_date || '-'}</p>
         </div>
       </div>
+
+      <!-- 進捗マイルストーン -->
+      ${buildMilestoneSection(milestones, project.project_id)}
 
       <!-- 担当者 -->
       <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">担当者</h3>
