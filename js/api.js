@@ -483,6 +483,60 @@ async function deleteTeam(teamId) {
 // ========================================
 
 /**
+ * マイルストーン工程タイプ一覧取得
+ */
+async function getMilestoneTypes() {
+  try {
+    const { data, error } = await supabase
+      .from('milestone_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      return handleSupabaseError(error, 'getMilestoneTypes');
+    }
+
+    return createSuccessResponse(data || [], 'マイルストーンタイプ取得成功');
+  } catch (error) {
+    return handleSupabaseError(error, 'getMilestoneTypes');
+  }
+}
+
+/**
+ * マイルストーン工程タイプ追加
+ */
+async function addMilestoneType(typeName) {
+  try {
+    // 最大display_orderを取得
+    const { data: existing } = await supabase
+      .from('milestone_types')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1);
+
+    const nextOrder = (existing && existing.length > 0) ? existing[0].display_order + 1 : 1;
+
+    const { data, error } = await supabase
+      .from('milestone_types')
+      .insert({ type_name: typeName, display_order: nextOrder })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return { success: false, message: 'この工程タイプは既に存在します' };
+      }
+      return handleSupabaseError(error, 'addMilestoneType');
+    }
+
+    return createSuccessResponse(data, '工程タイプを追加しました');
+  } catch (error) {
+    return handleSupabaseError(error, 'addMilestoneType');
+  }
+}
+
+/**
  * 案件のマイルストーン一覧取得
  */
 async function getProjectMilestones(projectId) {
