@@ -314,21 +314,27 @@ function parseMilestoneName(name) {
 
   const typeNames = currentMilestoneTypes.map(t => t.type_name);
 
-  // 稿タイプ特殊処理: 初稿, 2稿, 3稿...
+  // 稿タイプ特殊処理: 初稿, 2稿, 3稿, 最終稿...
   if (typeNames.includes('稿') && name.endsWith('稿') && name !== '稿') {
     const prefix = name.slice(0, -1);
     if (prefix === '初') {
       return { type: '稿', number: '1' };
+    }
+    if (prefix === '最終') {
+      return { type: '稿', number: 'final' };
     }
     if (/^\d+$/.test(prefix)) {
       return { type: '稿', number: prefix };
     }
   }
 
-  // 番号付きの既知タイプ（例: 社内確認2, 修正3）
+  // 番号付きの既知タイプ（例: 社内確認2, 修正3, 修正(最終)）
   for (const typeName of typeNames) {
     if (name === typeName) {
       return { type: typeName, number: '' };
+    }
+    if (name === typeName + '(最終)') {
+      return { type: typeName, number: 'final' };
     }
     if (name.startsWith(typeName)) {
       const suffix = name.slice(typeName.length);
@@ -367,11 +373,21 @@ function addEditMilestoneRow(data = null) {
   typeOptions += `<option value="other" ${otherSelected}>その他</option>`;
 
   // 番号オプション生成
-  const numbers = ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  const numbers = [
+    { value: '', label: 'なし' },
+    { value: '1', label: '初稿' },
+    { value: '2', label: '2稿' },
+    { value: '3', label: '3稿' },
+    { value: '4', label: '4稿' },
+    { value: '5', label: '5稿' },
+    { value: '6', label: '6稿' },
+    { value: '7', label: '7稿' },
+    { value: '8', label: '8稿' },
+    { value: 'final', label: '最終稿' }
+  ];
   const numberOptions = numbers.map(n => {
-    const selected = n === parsed.number ? 'selected' : '';
-    const label = n === '' ? 'なし' : n;
-    return `<option value="${n}" ${selected}>${label}</option>`;
+    const selected = n.value === parsed.number ? 'selected' : '';
+    return `<option value="${n.value}" ${selected}>${n.label}</option>`;
   }).join('');
 
   const showCustom = parsed.type === 'other' ? '' : 'display:none;';
@@ -453,13 +469,18 @@ function getMilestoneNameFromRow(row) {
 
   const num = row.querySelector('.milestone-number').value;
 
-  // 稿タイプの特殊処理: 1→初稿, 2→2稿
+  // 稿タイプの特殊処理
   if (type === '稿' && num) {
-    return (num === '1' ? '初' : num) + '稿';
+    if (num === '1') return '初稿';
+    if (num === 'final') return '最終稿';
+    return num + '稿';
   }
 
   // 番号なし
   if (!num) return type;
+
+  // 最終稿の場合
+  if (num === 'final') return type + '(最終)';
 
   // 番号あり: タイプ名 + 番号
   return type + num;

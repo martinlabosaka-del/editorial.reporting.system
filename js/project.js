@@ -753,6 +753,27 @@ function buildMilestoneSection(milestones, projectId) {
     `;
   }).join('');
 
+  // マイルストーン名を回数と項目に分解
+  function splitMilestoneName(name) {
+    if (!name) return { count: '-', item: '-' };
+    // 稿タイプ: 初稿, 2稿, 最終稿
+    if (name.endsWith('稿')) {
+      const prefix = name.slice(0, -1);
+      if (prefix === '初') return { count: '初稿', item: '稿' };
+      if (prefix === '最終') return { count: '最終稿', item: '稿' };
+      if (/^\d+$/.test(prefix)) return { count: name, item: '稿' };
+    }
+    // (最終)付き: 社内確認(最終)
+    if (name.endsWith('(最終)')) {
+      return { count: '最終', item: name.slice(0, -4) };
+    }
+    // 末尾の数字を分離: 社内確認2 → 2, 社内確認
+    const match = name.match(/^(.+?)(\d+)$/);
+    if (match) return { count: match[2], item: match[1] };
+    // 数字なし
+    return { count: '-', item: name };
+  }
+
   // テーブル行
   const tableRows = milestones.map(m => {
     let statusBadge = '<span class="status-badge" style="background:#e0e0e0;color:#666;">予定</span>';
@@ -765,9 +786,11 @@ function buildMilestoneSection(milestones, projectId) {
     const btnLabel = m.completed_date ? '取消' : '完了にする';
     const reviewerName = m.confirmed_by_name ? escapeHtml(m.confirmed_by_name) : '-';
     const memoText = m.memo ? escapeHtml(m.memo) : '-';
+    const parsed = splitMilestoneName(m.milestone_name);
     return `
       <tr style="border-bottom: 1px solid #eee;">
-        <td style="padding:10px;">${escapeHtml(m.milestone_name)}</td>
+        <td style="padding:10px;text-align:center;">${escapeHtml(parsed.count)}</td>
+        <td style="padding:10px;">${escapeHtml(parsed.item)}</td>
         <td style="padding:10px;text-align:center;">${reviewerName}</td>
         <td style="padding:10px;">${memoText}</td>
         <td style="padding:10px;text-align:center;">${m.planned_date || '-'}</td>
@@ -786,7 +809,8 @@ function buildMilestoneSection(milestones, projectId) {
     <table style="width:100%;border-collapse:collapse;margin-top:15px;">
       <thead>
         <tr style="background:#f5f5f5;border-bottom:2px solid #ddd;">
-          <th style="padding:10px;text-align:left;">工程</th>
+          <th style="padding:10px;text-align:center;">回数</th>
+          <th style="padding:10px;text-align:left;">項目</th>
           <th style="padding:10px;text-align:center;">上長確認者</th>
           <th style="padding:10px;text-align:left;">メモ</th>
           <th style="padding:10px;text-align:center;">予定日</th>
