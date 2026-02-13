@@ -765,11 +765,16 @@ function buildMilestoneSection(milestones, projectId) {
     }
     // (最終)付き: 社内確認(最終)
     if (name.endsWith('(最終)')) {
-      return { count: '最終', item: name.slice(0, -4) };
+      return { count: '最終稿', item: name.slice(0, -4) };
     }
-    // 末尾の数字を分離: 社内確認2 → 2, 社内確認
+    // (最終)を稿形式に
+    // 末尾の数字を分離: 社内確認2 → 2稿, 社内確認
     const match = name.match(/^(.+?)(\d+)$/);
-    if (match) return { count: match[2], item: match[1] };
+    if (match) {
+      const num = match[2];
+      const countLabel = num === '1' ? '初稿' : num + '稿';
+      return { count: countLabel, item: match[1] };
+    }
     // 数字なし
     return { count: '-', item: name };
   }
