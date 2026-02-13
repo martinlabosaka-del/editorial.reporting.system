@@ -554,7 +554,7 @@ async function getProjectMilestones(projectId) {
 
     const { data, error } = await supabase
       .from('project_milestones')
-      .select('*')
+      .select('*, confirmed_user:users!project_milestones_confirmed_by_fkey(user_id, name)')
       .eq('project_id', project.id)
       .order('display_order', { ascending: true });
 
@@ -562,7 +562,14 @@ async function getProjectMilestones(projectId) {
       return handleSupabaseError(error, 'getProjectMilestones');
     }
 
-    return createSuccessResponse(data || [], 'マイルストーン取得成功');
+    // confirmed_userをフラット化
+    const flattened = (data || []).map(m => ({
+      ...m,
+      confirmed_by_user_id: m.confirmed_user?.user_id || null,
+      confirmed_by_name: m.confirmed_user?.name || null
+    }));
+
+    return createSuccessResponse(flattened, 'マイルストーン取得成功');
   } catch (error) {
     return handleSupabaseError(error, 'getProjectMilestones');
   }
@@ -597,6 +604,7 @@ async function saveProjectMilestones(projectId, milestones) {
         milestone_name: m.milestone_name,
         planned_date: m.planned_date || null,
         completed_date: m.completed_date || null,
+        confirmed_by: m.confirmed_by || null,
         display_order: index
       }));
 

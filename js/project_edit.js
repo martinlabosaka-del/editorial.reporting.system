@@ -169,6 +169,14 @@ async function showProjectEditScreen(projectId) {
 
         <!-- 進捗マイルストーン -->
         <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
+        <div id="edit-milestones-header" style="display:flex;gap:10px;margin-bottom:6px;align-items:center;font-size:12px;font-weight:bold;color:#666;">
+          <span style="min-width:140px;">工程</span>
+          <span style="min-width:70px;">番号</span>
+          <span style="min-width:140px;">予定日</span>
+          <span style="min-width:140px;">完了日</span>
+          <span id="milestone-reviewer-header" style="min-width:140px;">確認者</span>
+          <span style="min-width:50px;"></span>
+        </div>
         <div id="edit-milestones-list"></div>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button type="button" class="add-row-btn" onclick="addEditMilestoneRow()">+ 工程追加</button>
@@ -254,7 +262,7 @@ async function showProjectEditScreen(projectId) {
   // マイルストーンを復元
   if (milestones.length > 0) {
     milestones.forEach(m => {
-      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '' });
+      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '', confirmed_by: m.confirmed_by || '' });
     });
   }
 
@@ -366,6 +374,17 @@ function addEditMilestoneRow(data = null) {
 
   const showCustom = parsed.type === 'other' ? '' : 'display:none;';
 
+  // 確認者プルダウン（リーダー以上）
+  const leaders = cachedMasterData.users.filter(u => (u.role === 'leader' || u.role === 'executive') && u.is_active);
+  let reviewerOptions = '<option value="">選択</option>';
+  leaders.forEach(u => {
+    const selected = data && data.confirmed_by === u.id ? 'selected' : '';
+    reviewerOptions += `<option value="${u.id}" ${selected}>${escapeHtml(u.name)}</option>`;
+  });
+
+  const isReviewType = parsed.type === '社内確認';
+  const showReviewer = isReviewType ? '' : 'visibility:hidden;';
+
   row.innerHTML = `
     <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="min-width:140px;">
       ${typeOptions}
@@ -374,8 +393,11 @@ function addEditMilestoneRow(data = null) {
       ${numberOptions}
     </select>
     <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="min-width:120px;${showCustom}">
-    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;" title="予定日">
-    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;" title="完了日（空欄なら未完了）">
+    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;">
+    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;">
+    <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
+      ${reviewerOptions}
+    </select>
     <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
   `;
 
@@ -388,12 +410,10 @@ function addEditMilestoneRow(data = null) {
 function onMilestoneTypeChange(select) {
   const row = select.closest('.milestone-edit-row');
   const customInput = row.querySelector('.milestone-custom');
+  const reviewerSelect = row.querySelector('.milestone-reviewer');
 
-  if (select.value === 'other') {
-    customInput.style.display = '';
-  } else {
-    customInput.style.display = 'none';
-  }
+  customInput.style.display = select.value === 'other' ? '' : 'none';
+  reviewerSelect.style.visibility = select.value === '社内確認' ? '' : 'hidden';
 }
 
 /**
@@ -767,8 +787,9 @@ async function saveProjectEdit() {
     const name = getMilestoneNameFromRow(row);
     const plannedDate = row.querySelector('.milestone-planned-date').value;
     const completedDate = row.querySelector('.milestone-completed-date').value;
+    const confirmedBy = row.querySelector('.milestone-reviewer').value || null;
     if (name) {
-      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate });
+      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate, confirmed_by: confirmedBy });
     }
   });
 

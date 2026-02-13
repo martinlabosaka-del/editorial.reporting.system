@@ -763,11 +763,13 @@ function buildMilestoneSection(milestones, projectId) {
     }
     const btnClass = m.completed_date ? 'btn-secondary' : 'btn-primary';
     const btnLabel = m.completed_date ? '取消' : '完了にする';
+    const reviewerName = m.confirmed_by_name ? escapeHtml(m.confirmed_by_name) : '-';
     return `
       <tr style="border-bottom: 1px solid #eee;">
         <td style="padding:10px;">${escapeHtml(m.milestone_name)}</td>
         <td style="padding:10px;text-align:center;">${m.planned_date || '-'}</td>
         <td style="padding:10px;text-align:center;">${m.completed_date || '-'}</td>
+        <td style="padding:10px;text-align:center;">${reviewerName}</td>
         <td style="padding:10px;text-align:center;">${statusBadge}</td>
         <td style="padding:10px;text-align:center;">
           <button class="btn btn-sm ${btnClass}" onclick="handleToggleMilestone('${m.id}', '${projectId}')">${btnLabel}</button>
@@ -785,6 +787,7 @@ function buildMilestoneSection(milestones, projectId) {
           <th style="padding:10px;text-align:left;">工程</th>
           <th style="padding:10px;text-align:center;">予定日</th>
           <th style="padding:10px;text-align:center;">完了日</th>
+          <th style="padding:10px;text-align:center;">確認者</th>
           <th style="padding:10px;text-align:center;">状態</th>
           <th style="padding:10px;text-align:center;">操作</th>
         </tr>
