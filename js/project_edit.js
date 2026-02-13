@@ -289,22 +289,120 @@ async function showProjectEditScreen(projectId) {
 }
 
 /**
+ * マイルストーン名を解析して工程タイプと番号に分解
+ */
+function parseMilestoneName(name) {
+  if (!name) return { type: '', number: '' };
+
+  // 稿タイプ: 初稿, 2稿, 3稿...
+  if (name.endsWith('稿')) {
+    const prefix = name.slice(0, -1);
+    if (prefix === '初' || /^\d+$/.test(prefix)) {
+      return { type: '稿', number: prefix };
+    }
+  }
+
+  // 既知の工程タイプ
+  const knownTypes = ['白パケ', '社内確認', '先方確認', '修正', '納品'];
+  if (knownTypes.includes(name)) {
+    return { type: name, number: '' };
+  }
+
+  // その他
+  return { type: 'other', customName: name };
+}
+
+/**
  * マイルストーン行追加（編集画面用）
  */
 function addEditMilestoneRow(data = null) {
   const container = document.getElementById('edit-milestones-list');
   const row = document.createElement('div');
   row.className = 'milestone-edit-row';
-  row.style.cssText = 'display: grid; grid-template-columns: 1fr 150px 150px 60px; gap: 10px; margin-bottom: 8px; align-items: center;';
+  row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 8px; align-items: center;';
+
+  // 既存データの解析
+  let parsed = { type: '', number: '' };
+  if (data && data.name) {
+    parsed = parseMilestoneName(data.name);
+  }
+
+  const processTypes = [
+    { value: '', label: '工程を選択' },
+    { value: '白パケ', label: '白パケ' },
+    { value: '稿', label: '稿（初稿・2稿・3稿...）' },
+    { value: '社内確認', label: '社内確認' },
+    { value: '先方確認', label: '先方確認' },
+    { value: '修正', label: '修正' },
+    { value: '納品', label: '納品' },
+    { value: 'other', label: 'その他' }
+  ];
+
+  const typeOptions = processTypes.map(p => {
+    const selected = p.value === parsed.type ? 'selected' : '';
+    return `<option value="${p.value}" ${selected}>${p.label}</option>`;
+  }).join('');
+
+  // 稿の番号オプション
+  const kouNumbers = ['初', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  const numberOptions = kouNumbers.map(n => {
+    const selected = n === parsed.number ? 'selected' : '';
+    return `<option value="${n}" ${selected}>${n}稿</option>`;
+  }).join('');
+
+  const showNumber = parsed.type === '稿' ? '' : 'display:none;';
+  const showCustom = parsed.type === 'other' ? '' : 'display:none;';
 
   row.innerHTML = `
-    <input type="text" class="milestone-name" placeholder="工程名（例：白パケ、社内確認）" value="${data ? escapeHtml(data.name) : ''}">
-    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}">
-    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" placeholder="完了日" title="完了日（空欄なら未完了）">
+    <select class="milestone-type" onchange="onMilestoneTypeChange(this)" style="min-width:160px;">
+      ${typeOptions}
+    </select>
+    <select class="milestone-number" style="min-width:80px;${showNumber}">
+      ${numberOptions}
+    </select>
+    <input type="text" class="milestone-custom" placeholder="工程名を入力" value="${parsed.customName ? escapeHtml(parsed.customName) : ''}" style="min-width:120px;${showCustom}">
+    <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;" title="予定日">
+    <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;" title="完了日（空欄なら未完了）">
     <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
   `;
 
   container.appendChild(row);
+}
+
+/**
+ * 工程タイプ変更時の処理
+ */
+function onMilestoneTypeChange(select) {
+  const row = select.closest('.milestone-edit-row');
+  const numberSelect = row.querySelector('.milestone-number');
+  const customInput = row.querySelector('.milestone-custom');
+
+  if (select.value === '稿') {
+    numberSelect.style.display = '';
+    customInput.style.display = 'none';
+  } else if (select.value === 'other') {
+    numberSelect.style.display = 'none';
+    customInput.style.display = '';
+  } else {
+    numberSelect.style.display = 'none';
+    customInput.style.display = 'none';
+  }
+}
+
+/**
+ * マイルストーン行から工程名を取得
+ */
+function getMilestoneNameFromRow(row) {
+  const type = row.querySelector('.milestone-type').value;
+  if (!type) return '';
+
+  if (type === '稿') {
+    const num = row.querySelector('.milestone-number').value;
+    return num + '稿';
+  } else if (type === 'other') {
+    return row.querySelector('.milestone-custom').value.trim();
+  }
+  return type;
 }
 
 /**
@@ -609,7 +707,7 @@ async function saveProjectEdit() {
   const milestoneRows = document.querySelectorAll('#edit-milestones-list .milestone-edit-row');
   const milestones = [];
   milestoneRows.forEach(row => {
-    const name = row.querySelector('.milestone-name').value.trim();
+    const name = getMilestoneNameFromRow(row);
     const plannedDate = row.querySelector('.milestone-planned-date').value;
     const completedDate = row.querySelector('.milestone-completed-date').value;
     if (name) {

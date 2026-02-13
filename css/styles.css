@@ -726,13 +726,6 @@ body { font-family: sans-serif; background: #f5f5f5; line-height: 1.6; }
   background: #ccc;
   position: relative;
   z-index: 1;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.milestone-node:hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .milestone-completed .milestone-node {

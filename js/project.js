@@ -744,7 +744,7 @@ function buildMilestoneSection(milestones, projectId) {
     return `
       <div class="milestone-step ${stepClass}">
         ${line}
-        <div class="milestone-node" onclick="handleToggleMilestone('${m.id}', '${projectId}')" title="クリックで完了/未完了を切替">
+        <div class="milestone-node">
           ${nodeContent}
         </div>
         <div class="milestone-label">${escapeHtml(m.milestone_name)}</div>
