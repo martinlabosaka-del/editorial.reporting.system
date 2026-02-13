@@ -552,14 +552,25 @@ async function getProjectMilestones(projectId) {
       return createSuccessResponse([], 'マイルストーンなし');
     }
 
-    const { data, error } = await supabase
+    // confirmed_by JOINを試み、失敗したらシンプルなクエリにフォールバック
+    let data, error;
+    ({ data, error } = await supabase
       .from('project_milestones')
       .select('*, confirmed_user:users!project_milestones_confirmed_by_fkey(user_id, name)')
       .eq('project_id', project.id)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true }));
 
     if (error) {
-      return handleSupabaseError(error, 'getProjectMilestones');
+      // confirmed_byカラムが未追加の場合はシンプルクエリで再取得
+      ({ data, error } = await supabase
+        .from('project_milestones')
+        .select('*')
+        .eq('project_id', project.id)
+        .order('display_order', { ascending: true }));
+
+      if (error) {
+        return handleSupabaseError(error, 'getProjectMilestones');
+      }
     }
 
     // confirmed_userをフラット化
@@ -609,12 +620,26 @@ async function saveProjectMilestones(projectId, milestones) {
         display_order: index
       }));
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('project_milestones')
         .insert(rows);
 
+      // confirmed_by/memoカラムが未追加の場合はシンプルな行で再試行
       if (error) {
-        return handleSupabaseError(error, 'saveProjectMilestones');
+        const simpleRows = milestones.map((m, index) => ({
+          project_id: project.id,
+          milestone_name: m.milestone_name,
+          planned_date: m.planned_date || null,
+          completed_date: m.completed_date || null,
+          display_order: index
+        }));
+        ({ error } = await supabase
+          .from('project_milestones')
+          .insert(simpleRows));
+
+        if (error) {
+          return handleSupabaseError(error, 'saveProjectMilestones');
+        }
       }
     }
 
