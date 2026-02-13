@@ -605,6 +605,7 @@ async function saveProjectMilestones(projectId, milestones) {
         planned_date: m.planned_date || null,
         completed_date: m.completed_date || null,
         confirmed_by: m.confirmed_by || null,
+        memo: m.memo || null,
         display_order: index
       }));
 

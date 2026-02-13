@@ -173,7 +173,8 @@ async function showProjectEditScreen(projectId) {
           <span style="min-width:60px;">順序</span>
           <span style="min-width:70px;">回数</span>
           <span style="min-width:280px;">工程</span>
-          <span id="milestone-reviewer-header" style="min-width:140px;">確認者</span>
+          <span id="milestone-reviewer-header" style="min-width:140px;">上長確認者</span>
+          <span style="min-width:160px;">メモ</span>
           <span style="min-width:140px;">予定日</span>
           <span style="min-width:140px;">完了日</span>
           <span style="min-width:50px;"></span>
@@ -263,7 +264,7 @@ async function showProjectEditScreen(projectId) {
   // マイルストーンを復元
   if (milestones.length > 0) {
     milestones.forEach(m => {
-      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '', confirmed_by: m.confirmed_by || '' });
+      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '', confirmed_by: m.confirmed_by || '', memo: m.memo || '' });
     });
   }
 
@@ -401,6 +402,7 @@ function addEditMilestoneRow(data = null) {
     <select class="milestone-reviewer" style="min-width:140px;${showReviewer}">
       ${reviewerOptions}
     </select>
+    <input type="text" class="milestone-memo" placeholder="" value="${data && data.memo ? escapeHtml(data.memo) : ''}" style="min-width:160px;">
     <input type="date" class="milestone-planned-date" value="${data ? data.planned_date : ''}" style="min-width:140px;">
     <input type="date" class="milestone-completed-date" value="${data ? data.completed_date : ''}" style="min-width:140px;">
     <button type="button" class="remove-row-btn" onclick="this.parentElement.remove();">削除</button>
@@ -808,8 +810,9 @@ async function saveProjectEdit() {
     const plannedDate = row.querySelector('.milestone-planned-date').value;
     const completedDate = row.querySelector('.milestone-completed-date').value;
     const confirmedBy = row.querySelector('.milestone-reviewer').value || null;
+    const memo = row.querySelector('.milestone-memo').value.trim() || null;
     if (name) {
-      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate, confirmed_by: confirmedBy });
+      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate, confirmed_by: confirmedBy, memo: memo });
     }
   });
 
