@@ -904,9 +904,6 @@ async function showProjectDetail(projectId) {
         </div>
       </div>
 
-      <!-- 進捗マイルストーン -->
-      ${buildMilestoneSection(milestones, project.project_id)}
-
       <!-- 担当者 -->
       <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">担当者</h3>
 
@@ -1001,6 +998,9 @@ async function showProjectDetail(projectId) {
           編集費合計金額: ¥${formatNumber(project.estimate_total || 0)}
         </div>
       </div>
+
+      <!-- 進捗マイルストーン -->
+      ${buildMilestoneSection(milestones, project.project_id)}
 
       <!-- 編集目標時間と実働編集時間 -->
       <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">編集目標時間と実働編集時間</h3>

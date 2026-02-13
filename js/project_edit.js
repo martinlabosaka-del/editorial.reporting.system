@@ -73,11 +73,6 @@ async function showProjectEditScreen(projectId) {
           </div>
         </div>
 
-        <!-- 進捗マイルストーン -->
-        <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
-        <div id="edit-milestones-list"></div>
-        <button type="button" class="add-row-btn" onclick="addEditMilestoneRow()">+ 工程追加</button>
-
         <!-- 担当者 -->
         <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">担当者</h3>
 
@@ -166,6 +161,11 @@ async function showProjectEditScreen(projectId) {
             編集費合計金額: <span id="edit-estimate-total">0円</span>
           </div>
         </div>
+
+        <!-- 進捗マイルストーン -->
+        <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
+        <div id="edit-milestones-list"></div>
+        <button type="button" class="add-row-btn" onclick="addEditMilestoneRow()">+ 工程追加</button>
 
         <!-- 編集目標時間と実働編集時間 -->
         <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">編集目標時間と実働編集時間</h3>
