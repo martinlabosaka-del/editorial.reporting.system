@@ -741,13 +741,17 @@ function buildMilestoneSection(milestones, projectId) {
     }
     const line = i > 0 ? '<div class="milestone-line"></div>' : '';
     const nodeContent = m.completed_date ? '✓' : (i + 1);
+    const parsed = splitMilestoneName(m.milestone_name);
+    const stepLabel = parsed.item === '稿' ? parsed.count
+      : parsed.count === '-' ? parsed.item
+      : `${parsed.count} ${parsed.item}`;
     return `
       <div class="milestone-step ${stepClass}">
         ${line}
         <div class="milestone-node">
           ${nodeContent}
         </div>
-        <div class="milestone-label">${escapeHtml(m.milestone_name)}</div>
+        <div class="milestone-label">${escapeHtml(stepLabel)}</div>
         <div class="milestone-date">${m.planned_date || '-'}</div>
       </div>
     `;
