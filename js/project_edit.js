@@ -376,7 +376,7 @@ function addEditMilestoneRow(data = null) {
   const showCustom = parsed.type === 'other' ? '' : 'display:none;';
 
   // 確認者プルダウン（リーダー以上）
-  const leaders = cachedMasterData.users.filter(u => (u.role === 'leader' || u.role === 'executive') && u.is_active);
+  const leaders = cachedMasterData.users.filter(u => u.is_editor && (u.role === 'leader' || u.role === 'executive') && u.is_active);
   let reviewerOptions = '<option value="">選択</option>';
   leaders.forEach(u => {
     const selected = data && data.confirmed_by === u.id ? 'selected' : '';
