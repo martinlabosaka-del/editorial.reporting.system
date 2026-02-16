@@ -85,6 +85,9 @@ function buildTimelineShell() {
         <span class="timeline-legend-item">
           <span class="tl-delivery-marker" style="font-size:14px;">&#9733;</span>納品予定日
         </span>
+        <span class="timeline-legend-item">
+          <span class="tl-delivery-marker tl-actual-delivery-legend" style="font-size:14px;">&#9733;</span>実納品日
+        </span>
       </div>
     </div>
   `;
@@ -160,6 +163,7 @@ function calculateDateRange() {
   const allDates = [];
   projects.forEach(p => {
     if (p.delivery_date) allDates.push(new Date(p.delivery_date));
+    if (p.actual_delivery_date) allDates.push(new Date(p.actual_delivery_date));
     (p.milestones || []).forEach(m => {
       if (m.planned_date) allDates.push(new Date(m.planned_date));
       if (m.completed_date) allDates.push(new Date(m.completed_date));
@@ -356,7 +360,13 @@ function renderCellContent(project, column) {
   if (project.delivery_date &&
       project.delivery_date >= column.startStr &&
       project.delivery_date <= column.endStr) {
-    deliveryMarker = '<div class="tl-delivery" title="納品予定日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">納品予定日</span></div>';
+    deliveryMarker += '<div class="tl-delivery" title="納品予定日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">納品予定日</span></div>';
+  }
+  // 実納品日のチェック
+  if (project.actual_delivery_date &&
+      project.actual_delivery_date >= column.startStr &&
+      project.actual_delivery_date <= column.endStr) {
+    deliveryMarker += '<div class="tl-delivery tl-actual-delivery" title="実納品日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">実納品日</span></div>';
   }
 
   if (milestones.length === 0) {
