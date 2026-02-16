@@ -152,9 +152,10 @@ function calculateDateRange() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 今日を左端にして、右端はデータの最終日付+2週間
+  // データの最小・最大日付を算出
+  let minDate = new Date(today);
   let maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + 30); // デフォルト: 今日から30日後
+  maxDate.setDate(maxDate.getDate() + 30);
 
   const allDates = [];
   projects.forEach(p => {
@@ -166,7 +167,13 @@ function calculateDateRange() {
   });
 
   if (allDates.length > 0) {
+    const dataMin = new Date(Math.min(...allDates));
     const dataMax = new Date(Math.max(...allDates));
+    // 過去のデータも含める（2週間前のパディング）
+    dataMin.setDate(dataMin.getDate() - 14);
+    if (dataMin < minDate) {
+      minDate = dataMin;
+    }
     dataMax.setDate(dataMax.getDate() + 14);
     if (dataMax > maxDate) {
       maxDate = dataMax;
@@ -174,7 +181,6 @@ function calculateDateRange() {
   }
 
   // 月表示の場合は月初・月末にアライン
-  let minDate = new Date(today);
   if (timelineState.viewMode === 'month') {
     minDate.setDate(1);
     maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
@@ -268,6 +274,9 @@ function renderTimeline() {
       ${rowsHtml}
     </div>
   `;
+
+  // 今日の列が左端に来るようスクロール
+  scrollToToday(columns, colWidth);
 }
 
 /**
@@ -414,6 +423,17 @@ function getTimelineUserName(userId) {
   if (!userId || !cachedMasterData.users) return '-';
   const user = cachedMasterData.users.find(u => u.id === userId);
   return user ? user.name : '-';
+}
+
+function scrollToToday(columns, colWidth) {
+  const container = document.getElementById('timeline-container');
+  if (!container) return;
+  const today = formatDateISO(new Date());
+  const todayIndex = columns.findIndex(col => col.startStr <= today && col.endStr >= today);
+  if (todayIndex >= 0) {
+    // 案件名ラベル幅(200px)を除いた位置にスクロール
+    container.scrollLeft = todayIndex * colWidth;
+  }
 }
 
 function getColumnWidth() {
