@@ -83,7 +83,7 @@ function buildTimelineShell() {
           <span class="timeline-legend-dot" style="background: #bbb;"></span>予定
         </span>
         <span class="timeline-legend-item">
-          <span class="timeline-legend-diamond"></span>マイルストーン
+          <span class="tl-delivery-marker" style="font-size:14px;">&#9733;</span>納品予定日
         </span>
       </div>
     </div>
@@ -352,7 +352,7 @@ function renderCellContent(project, column) {
   if (project.delivery_date &&
       project.delivery_date >= column.startStr &&
       project.delivery_date <= column.endStr) {
-    deliveryMarker = '<div class="tl-delivery-marker" title="納品予定日">&#9733;</div>';
+    deliveryMarker = '<div class="tl-delivery" title="納品予定日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">納品予定日</span></div>';
   }
 
   if (milestones.length === 0) {
@@ -370,14 +370,26 @@ function renderCellContent(project, column) {
     }
 
     const parsed = timelineSplitMilestoneName(m.milestone_name);
-    const displayName = parsed.item === '稿' ? parsed.count
-      : parsed.count === '-' ? parsed.item
-      : `${parsed.count}`;
+    // 回数+項目を両方表示
+    let displayName;
+    if (parsed.item === '稿') {
+      displayName = parsed.count; // 初稿、2稿、最終稿
+    } else if (parsed.count === '-') {
+      displayName = parsed.item;
+    } else {
+      displayName = `${parsed.count} ${parsed.item}`; // 初稿 社内確認
+    }
+
+    // 社内確認は〇マーカー、それ以外はダイヤモンド
+    const isCircle = m.milestone_name.includes('社内確認');
+    const markerHtml = isCircle
+      ? '<div class="tl-milestone-circle"></div>'
+      : '<div class="tl-milestone-diamond"></div>';
 
     const tooltip = `${m.milestone_name}\n予定: ${m.planned_date || '-'}\n完了: ${m.completed_date || '-'}`;
 
     return `<div class="tl-milestone ${colorClass}" title="${escapeHtml(tooltip)}">
-        <div class="tl-milestone-diamond"></div>
+        ${markerHtml}
         <span class="tl-milestone-text">${escapeHtml(displayName)}</span>
       </div>`;
   }).join('');
