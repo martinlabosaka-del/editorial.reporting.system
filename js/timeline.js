@@ -304,7 +304,10 @@ function generateDateColumns(start, end) {
       case 'week': {
         // 週の開始（月曜日）にアライン
         const weekStart = new Date(current);
-        const weekEnd = new Date(current);
+        const dayOfWeek = weekStart.getDay(); // 0=日, 1=月, ..., 6=土
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        weekStart.setDate(weekStart.getDate() + diffToMonday);
+        const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
 
         columns.push({
@@ -314,6 +317,7 @@ function generateDateColumns(start, end) {
           fullLabel: `${formatDateISO(weekStart)} ~ ${formatDateISO(weekEnd)}`,
           isWeekend: false
         });
+        current.setTime(weekStart.getTime());
         current.setDate(current.getDate() + 7);
         break;
       }
