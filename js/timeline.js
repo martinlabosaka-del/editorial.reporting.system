@@ -5,7 +5,7 @@
 // タイムラインの状態管理
 let timelineState = {
   viewMode: 'week',    // 'day', 'week', 'month'
-  filter: 'all',       // 'mine', 'director', 'others', 'all'
+  filter: 'mine',      // 'mine', 'director', 'others', 'all'
   projects: [],        // 読み込んだ全プロジェクト（マイルストーン付き）
   dateRange: { start: null, end: null }
 };
@@ -49,8 +49,8 @@ function buildTimelineShell() {
 
       <div class="timeline-controls">
         <div class="timeline-filter-group">
-          <button class="btn timeline-filter-btn active" data-filter="all" onclick="setTimelineFilter('all')">全案件</button>
-          <button class="btn timeline-filter-btn" data-filter="mine" onclick="setTimelineFilter('mine')">自分の案件</button>
+          <button class="btn timeline-filter-btn" data-filter="all" onclick="setTimelineFilter('all')">全案件</button>
+          <button class="btn timeline-filter-btn active" data-filter="mine" onclick="setTimelineFilter('mine')">自分の案件</button>
           <button class="btn timeline-filter-btn" data-filter="director" onclick="setTimelineFilter('director')">ディレクター案件</button>
           <button class="btn timeline-filter-btn" data-filter="others" onclick="setTimelineFilter('others')">他の人の案件</button>
         </div>
@@ -150,8 +150,11 @@ function getFilteredProjects() {
 function calculateDateRange() {
   const projects = getFilteredProjects();
   const today = new Date();
-  let minDate = new Date(today);
+  today.setHours(0, 0, 0, 0);
+
+  // 今日を左端にして、右端はデータの最終日付+2週間
   let maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 30); // デフォルト: 今日から30日後
 
   const allDates = [];
   projects.forEach(p => {
@@ -163,15 +166,15 @@ function calculateDateRange() {
   });
 
   if (allDates.length > 0) {
-    minDate = new Date(Math.min(...allDates));
-    maxDate = new Date(Math.max(...allDates));
+    const dataMax = new Date(Math.max(...allDates));
+    dataMax.setDate(dataMax.getDate() + 14);
+    if (dataMax > maxDate) {
+      maxDate = dataMax;
+    }
   }
 
-  // 前後2週間のパディング
-  minDate.setDate(minDate.getDate() - 14);
-  maxDate.setDate(maxDate.getDate() + 14);
-
   // 月表示の場合は月初・月末にアライン
+  let minDate = new Date(today);
   if (timelineState.viewMode === 'month') {
     minDate.setDate(1);
     maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
@@ -208,7 +211,7 @@ function renderTimeline() {
     let monthSpan = 0;
     const monthGroups = [];
 
-    columns.forEach((col, i) => {
+    columns.forEach(col => {
       const colDate = new Date(col.startStr);
       const monthKey = `${colDate.getFullYear()}/${colDate.getMonth() + 1}`;
       if (monthKey !== currentMonth) {
