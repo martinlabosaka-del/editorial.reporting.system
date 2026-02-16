@@ -73,6 +73,9 @@ async function restoreScreen() {
       case 'admin':
         showAdminScreen();
         break;
+      case 'timeline':
+        showTimeline();
+        break;
       default:
         showDashboard();
     }
@@ -116,7 +119,8 @@ function hideAllScreens() {
     'edit-time-registration-screen',
     'approval-search-screen',
     'approval-detail-screen',
-    'admin-screen'
+    'admin-screen',
+    'timeline-screen'
   ];
 
   screens.forEach(screenId => {
@@ -210,6 +214,11 @@ function displayMenu(containerId) {
         title: '案件検索',
         desc: '全案件を検索（詳細表示のみ）',
         action: 'showProjectSearch()'
+      },
+      {
+        title: '案件タイムライン',
+        desc: '進行中案件のマイルストーンをタイムラインで表示',
+        action: 'showTimeline()'
       }
     ];
     // 管理者の場合は管理画面メニューを追加
@@ -257,6 +266,11 @@ function displayMenu(containerId) {
         title: '案件検索',
         desc: '全案件を検索（statusに応じた詳細画面表示）',
         action: 'showProjectSearch()'
+      },
+      {
+        title: '案件タイムライン',
+        desc: '進行中案件のマイルストーンをタイムラインで表示',
+        action: 'showTimeline()'
       }
     ];
     // 管理者の場合は管理画面メニューを追加
@@ -274,6 +288,11 @@ function displayMenu(containerId) {
         title: '案件検索',
         desc: '全案件を検索（statusに応じた詳細画面表示）',
         action: 'showProjectSearch()'
+      },
+      {
+        title: '案件タイムライン',
+        desc: '進行中案件のマイルストーンをタイムラインで表示',
+        action: 'showTimeline()'
       }
     ];
     // 管理者の場合は管理画面メニューを追加

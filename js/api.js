@@ -587,6 +587,40 @@ async function getProjectMilestones(projectId) {
 }
 
 /**
+ * 複数案件のマイルストーン一括取得（タイムライン用）
+ */
+async function getMultipleProjectMilestones(projectUuids) {
+  try {
+    if (!projectUuids || projectUuids.length === 0) {
+      return createSuccessResponse({});
+    }
+
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .in('project_id', projectUuids)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      return handleSupabaseError(error, 'getMultipleProjectMilestones');
+    }
+
+    // project_idでグループ化
+    const grouped = {};
+    (data || []).forEach(m => {
+      if (!grouped[m.project_id]) {
+        grouped[m.project_id] = [];
+      }
+      grouped[m.project_id].push(m);
+    });
+
+    return createSuccessResponse(grouped);
+  } catch (error) {
+    return handleSupabaseError(error, 'getMultipleProjectMilestones');
+  }
+}
+
+/**
  * マイルストーン一括保存（delete + re-insert）
  */
 async function saveProjectMilestones(projectId, milestones) {
