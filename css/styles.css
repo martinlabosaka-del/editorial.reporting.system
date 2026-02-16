@@ -1040,6 +1040,19 @@ body { font-family: sans-serif; background: #f5f5f5; line-height: 1.6; }
   display: inline-block;
 }
 
+.tl-legend-shapes {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tl-legend-circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: inline-block;
+}
+
 @media (max-width: 768px) {
   .timeline-controls {
     flex-direction: column;

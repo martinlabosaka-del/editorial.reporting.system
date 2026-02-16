@@ -74,13 +74,13 @@ function buildTimelineShell() {
 
       <div class="timeline-legend">
         <span class="timeline-legend-item">
-          <span class="timeline-legend-dot" style="background: #4CAF50;"></span>完了
+          <span class="tl-legend-shapes" style="color:#4CAF50;">&#9670;</span><span class="tl-legend-circle" style="background:#4CAF50;border-color:#4CAF50;"></span>完了
         </span>
         <span class="timeline-legend-item">
-          <span class="timeline-legend-dot" style="background: #f44336;"></span>遅延
+          <span class="tl-legend-shapes" style="color:#f44336;">&#9670;</span><span class="tl-legend-circle" style="border-color:#f44336;"></span>遅延
         </span>
         <span class="timeline-legend-item">
-          <span class="timeline-legend-dot" style="background: #bbb;"></span>予定
+          <span class="tl-legend-shapes" style="color:#bbb;">&#9670;</span><span class="tl-legend-circle" style="border-color:#bbb;"></span>予定
         </span>
         <span class="timeline-legend-item">
           <span class="tl-delivery-marker" style="font-size:14px;">&#9733;</span>納品予定日
