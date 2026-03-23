@@ -1513,6 +1513,17 @@ async function getDashboardData(userId) {
  */
 async function getCompletedProjects(userId, dateFrom, dateTo) {
   try {
+    // userIdからUUIDを取得してmain_editorを正しくフィルター
+    const { data: userRecord } = await supabase
+      .from('users')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!userRecord) {
+      return createSuccessResponse([]);
+    }
+
     // actual_delivery_dateが入力されているプロジェクトを取得
     const { data, error } = await supabase
       .from('projects')
@@ -1521,7 +1532,7 @@ async function getCompletedProjects(userId, dateFrom, dateTo) {
         client:clients(client_name, agency_name),
         main_editor_user:users!main_editor(user_id, name)
       `)
-      .eq('main_editor_user.user_id', userId)
+      .eq('main_editor', userRecord.id)
       .not('actual_delivery_date', 'is', null)
       .gte('delivery_date', dateFrom)
       .lte('delivery_date', dateTo)
