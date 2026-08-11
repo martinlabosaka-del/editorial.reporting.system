@@ -153,7 +153,7 @@ async function showProjectRegistration() {
           <label>見積合計金額</label>
           <input type="number" id="estimate-grand-total" placeholder="例：500000" min="0" step="1">
           <small style="color: #666;">
-            編集費以外（撮影費・機材費・諸経費など）を含む、見積書全体の合計金額を入力してください。
+            見積書全体の合計金額を入力してください。
           </small>
         </div>
 

@@ -161,7 +161,7 @@ async function showProjectEditScreen(projectId) {
                  value="${project.estimate_grand_total != null ? Math.round(project.estimate_grand_total) : ''}"
                  placeholder="例：500000" min="0" step="1">
           <small style="color: #666;">
-            編集費以外（撮影費・機材費・諸経費など）を含む、見積書全体の合計金額
+            見積書全体の合計金額を入力してください。
           </small>
         </div>
 
