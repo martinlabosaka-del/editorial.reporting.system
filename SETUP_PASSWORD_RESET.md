@@ -35,15 +35,42 @@ Supabase ダッシュボード → **Authentication** → **URL Configuration**
 
 Supabase ダッシュボード → **Project Settings** → **Authentication** → **SMTP Settings**
 
-**Supabase 内蔵のメール送信は本番運用に使えません。**
-1時間あたり数通という厳しい制限があり、宛先もプロジェクトメンバーに
-限定されるため、一般ユーザーにはメールが届きません。
+**Supabase 内蔵のメール送信は本番運用に使えません。** 制限は2つあります。
+
+1. **1時間あたり2通**まで
+2. **Supabase プロジェクトのチームメンバーのアドレスにしか送れない**
+   それ以外の宛先は `Email address not authorized` で失敗します
+
+> Unless you configure a custom SMTP server for your project, Supabase Auth will
+> refuse to deliver messages to addresses that are not part of the project's team.
+> （[Supabase公式ドキュメント](https://supabase.com/docs/guides/auth/auth-smtp)）
+
+### 「チームメンバー」と「アプリの利用者」は別物です
+
+ここを混同しやすいので注意してください。
+
+| | Supabase プロジェクトメンバー | アプリの利用者 |
+|---|---|---|
+| 正体 | Supabaseダッシュボードにログインできる人 | 編集報告システムにログインする人 |
+| 実体 | Organization に招待されたアカウント | `auth.users` / `users` のレコード |
+| できること | 課金設定・SQL Editor・RLS変更 | 案件登録・編集時間登録・承認 |
+| 人数 | 1〜3名（運用担当） | 20名程度（編集者・リーダー・役員） |
+
+**アプリの利用者を増やしてもプロジェクトメンバーは増えません。**
+また、メールを届かせるためにアプリ利用者をプロジェクトメンバーに
+招待するのは絶対にやめてください。DB全体を操作できてしまいます。
+
+つまりSMTPを設定しない限り、一般の編集者にはパスワード再設定メールが
+1通も届きません。
+
+### 対応
 
 Resend、SendGrid、Amazon SES などの外部SMTPを設定してください。
-社内利用の規模であれば無料枠で足ります。
+20名規模なら無料枠で十分です（例: Resend は月3,000通・1日100通まで無料）。
 
 設定後、**Authentication → Rate Limits** の
-「Rate limit for sending emails」も必要に応じて調整してください。
+「Rate limit for sending emails」も必要に応じて調整してください
+（内蔵サービスの2通/時はSMTP設定後に解除されます）。
 
 ## 3. メール文面の日本語化（任意）
 
@@ -88,7 +115,9 @@ Supabase ダッシュボード → **Authentication** → **Email Templates** �
   ORDER BY u.user_id;
   ```
 
-- SMTP未設定なら、まず上記2を実施してください。
+- **SMTP未設定なら、まず上記2を実施してください。**
+  未設定の状態では、Supabaseプロジェクトのチームメンバー以外には
+  `Email address not authorized` となり1通も届きません。
 - 迷惑メールフォルダも確認してください。
 
 ### 「リンクの有効期限が切れています」と出るとき
