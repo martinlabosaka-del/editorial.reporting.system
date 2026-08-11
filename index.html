@@ -40,6 +40,86 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%;">ログイン</button>
       <div id="login-message"></div>
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="#" onclick="showForgotPasswordScreen(); return false;"
+           style="color: #4CAF50; font-size: 14px; text-decoration: underline;">
+          パスワードをお忘れの方
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- パスワード再設定リクエスト画面 -->
+  <div id="forgot-password-screen" class="hidden">
+    <div class="login-container">
+      <h1>パスワードの再設定</h1>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
+        登録されているメールアドレスを入力してください。<br>
+        パスワード再設定用のリンクをお送りします。
+      </p>
+
+      <div class="form-group">
+        <label>メールアドレス</label>
+        <input type="email" id="forgot-email" placeholder="メールアドレスを入力" autocomplete="email">
+      </div>
+
+      <button class="btn btn-primary" onclick="handleForgotPassword()" style="width: 100%;">
+        再設定用リンクを送信
+      </button>
+      <div id="forgot-password-message"></div>
+
+      <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <p style="color: #666; font-size: 13px; line-height: 1.7; margin: 0;">
+          <strong>メールが届かない場合</strong><br>
+          迷惑メールフォルダをご確認ください。それでも届かない場合や、
+          登録されているメールアドレスが分からない場合は、
+          システム管理者にご連絡ください。管理者側でパスワードを再設定できます。
+        </p>
+      </div>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="#" onclick="backToLoginScreen(); return false;"
+           style="color: #666; font-size: 14px; text-decoration: underline;">
+          ログイン画面に戻る
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新しいパスワードの設定画面（メールのリンクから遷移してくる） -->
+  <div id="reset-password-screen" class="hidden">
+    <div class="login-container">
+      <h1>新しいパスワードの設定</h1>
+
+      <p style="color: #666; font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
+        新しいパスワードを入力してください。<br>
+        設定後、そのパスワードでログインし直してください。
+      </p>
+
+      <div class="form-group">
+        <label>新しいパスワード</label>
+        <input type="password" id="reset-password-new" placeholder="8文字以上"
+               minlength="8" autocomplete="new-password">
+      </div>
+
+      <div class="form-group">
+        <label>新しいパスワード（確認）</label>
+        <input type="password" id="reset-password-confirm" placeholder="もう一度入力"
+               minlength="8" autocomplete="new-password">
+      </div>
+
+      <button class="btn btn-primary" onclick="handleSetNewPassword()" style="width: 100%;">
+        パスワードを設定
+      </button>
+      <div id="reset-password-screen-message"></div>
+
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="#" onclick="backToLoginScreen(); return false;"
+           style="color: #666; font-size: 14px; text-decoration: underline;">
+          ログイン画面に戻る
+        </a>
+      </div>
     </div>
   </div>
 

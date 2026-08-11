@@ -5,6 +5,29 @@
 // 画面状態
 let currentScreen = 'menu';
 
+// パスワード再設定メールのリンクから戻ってきたかの判定に使う。
+// Supabaseクライアントは初期化時にURLのハッシュを読んで消すため、
+// それより前（このスクリプトの解析時点）に控えておく。
+// supabase-client.js の初期化は DOMContentLoaded 後なので、ここが先に走る。
+const INITIAL_URL_HASH = window.location.hash || '';
+
+/**
+ * パスワード再設定リンクからの遷移かどうか
+ * Supabaseは #access_token=...&type=recovery の形式でハッシュを付けて戻す
+ */
+function isPasswordRecoveryUrl(hash) {
+  return hash.indexOf('type=recovery') !== -1;
+}
+
+/**
+ * 認証リンクが無効・期限切れだったかどうか
+ * この場合は #error=access_denied&error_code=otp_expired... の形で戻ってくる。
+ * このアプリでハッシュにエラーが乗る経路はパスワード再設定リンクのみ。
+ */
+function isAuthLinkError(hash) {
+  return hash.indexOf('error=') !== -1;
+}
+
 /**
  * 現在の画面状態を保存
  */
@@ -89,6 +112,25 @@ async function restoreScreen() {
  * アプリケーション初期化
  */
 async function initApp() {
+  // パスワード再設定リンクからの遷移を、通常のセッション判定より先に処理する。
+  // 再設定リンクは一時的なセッションを張るため、ここで分岐しないと
+  // そのままログイン状態としてダッシュボードに入ってしまう。
+  if (isPasswordRecoveryUrl(INITIAL_URL_HASH)) {
+    showResetPasswordScreen();
+    return;
+  }
+
+  if (isAuthLinkError(INITIAL_URL_HASH)) {
+    // ハッシュを消してリロード時に再表示されないようにする
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    showLoginScreen();
+    showLoginMessage(
+      'リンクの有効期限が切れています。お手数ですが、もう一度パスワードの再設定をお試しください。',
+      'error'
+    );
+    return;
+  }
+
   // Supabaseセッション確認
   const result = await checkSession();
   if (result.success) {
