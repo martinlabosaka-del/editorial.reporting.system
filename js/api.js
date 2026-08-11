@@ -1974,62 +1974,6 @@ async function saveEditTime(editTimeData) {
 }
 
 // ========================================
-// 承認関連API
-// ========================================
-
-/**
- * リーダー承認
- */
-async function approveProjectByLeader(evaluationData) {
-  try {
-    const user = getCurrentUser();
-    if (!user) {
-      return { success: false, message: 'ユーザー情報が取得できません' };
-    }
-
-    const { data, error } = await supabase.rpc('approve_project_by_leader', {
-      p_project_id: evaluationData.project_id,
-      p_leader_id: user.id,
-      p_evaluation_data: evaluationData
-    });
-
-    if (error) {
-      return handleSupabaseError(error, 'approveProjectByLeader');
-    }
-
-    return data;
-  } catch (error) {
-    return handleSupabaseError(error, 'approveProjectByLeader');
-  }
-}
-
-/**
- * リーダー差戻
- */
-async function rejectProjectByLeader(data) {
-  try {
-    const user = getCurrentUser();
-    if (!user) {
-      return { success: false, message: 'ユーザー情報が取得できません' };
-    }
-
-    const { data: result, error } = await supabase.rpc('reject_project_by_leader', {
-      p_project_id: data.project_id,
-      p_leader_id: user.id,
-      p_rejection_reason: data.rejection_reason
-    });
-
-    if (error) {
-      return handleSupabaseError(error, 'rejectProjectByLeader');
-    }
-
-    return result;
-  } catch (error) {
-    return handleSupabaseError(error, 'rejectProjectByLeader');
-  }
-}
-
-// ========================================
 // ダッシュボードAPI
 // ========================================
 

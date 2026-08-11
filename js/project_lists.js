@@ -125,7 +125,6 @@ async function showFeedbackList() {
   // 過去2ヶ月の日付を計算
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-  const fromDate = formatDate(twoMonthsAgo);
 
   const result = await searchProjects({
     main_editor: user.user_id,
