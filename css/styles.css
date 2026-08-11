@@ -1014,6 +1014,10 @@ body { font-family: sans-serif; background: #f5f5f5; line-height: 1.6; }
   color: #2196F3;
 }
 
+.tl-delivery-overdue .tl-delivery-marker {
+  color: #f44336;
+}
+
 /* 凡例 */
 .timeline-legend {
   display: flex;

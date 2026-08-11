@@ -356,11 +356,13 @@ function renderCellContent(project, column) {
   });
 
   // 納品予定日のチェック
+  const today = formatDateISO(new Date());
   let deliveryMarker = '';
   if (project.delivery_date &&
       project.delivery_date >= column.startStr &&
       project.delivery_date <= column.endStr) {
-    deliveryMarker += '<div class="tl-delivery" title="納品予定日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">納品予定日</span></div>';
+    const isOverdue = project.delivery_date < today && !project.actual_delivery_date;
+    deliveryMarker += `<div class="tl-delivery${isOverdue ? ' tl-delivery-overdue' : ''}" title="納品予定日"><span class="tl-delivery-marker">&#9733;</span><span class="tl-milestone-text">納品予定日</span></div>`;
   }
   // 実納品日のチェック
   if (project.actual_delivery_date &&
@@ -372,8 +374,6 @@ function renderCellContent(project, column) {
   if (milestones.length === 0) {
     return deliveryMarker;
   }
-
-  const today = formatDateISO(new Date());
 
   const markersHtml = milestones.map(m => {
     let colorClass = 'tl-milestone-upcoming';
