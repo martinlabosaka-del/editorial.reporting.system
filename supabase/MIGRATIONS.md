@@ -20,6 +20,7 @@
 | 5 | `migrations/018_add_editor_admin_flags_to_registration.sql` | 2026-01-08 |
 | 6 | `16_add_affiliations_teams.sql` 〜 `20_add_milestone_memo.sql` | 2026-02-12〜13 |
 | 7 | `migrations/019_secure_user_registration.sql` | 2026-08-11 |
+| 8 | `migrations/020_fix_rls_policies.sql` | 2026-08-11 |
 
 `00_setup_all.sql` は `01`〜`05` をまとめた初期構築用です。
 新規構築では `00` のみ、既存DBへは `01` 以降を個別に適用します。
@@ -28,19 +29,35 @@
 
 ## 今後のルール
 
-新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `020_`）。
+新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `021_`）。
 `supabase/` 直下の2桁番号は追加しません。
 
 ## 既知の注意点
 
+### RLS は 020 で作り直しています
+
 `migrations/017_fix_rls_policies.sql` は `projects` / `edit_history` /
 `estimate_breakdown` / `completed_urls` に `USING (true) WITH CHECK (true)` の
-ポリシーを追加しています。PostgreSQL の permissive ポリシーは OR で結合されるため、
-`02_rls_policies.sql` の細かい制限は事実上無効化されています
-（＝ログイン済みなら誰でも全案件を更新できる状態）。
+ポリシーを追加していました。PostgreSQL の permissive ポリシーは OR で結合されるため、
+`02_rls_policies.sql` の細かい制限は事実上無効化されていました。
 
-これは `02_rls_policies.sql` がアプリの実動作と噛み合っていなかった
-（案件の更新を `created_by` にしか許可していないが、実際に編集するのは `main_editor`。
-`completed_urls` にはポリシーが1つも無い、など）ことへの暫定対処と思われます。
-修正する場合は 017 を消すだけでは動かなくなるため、
-ポリシー全体を設計し直す必要があります。
+017 がこうなった原因は `02_rls_policies.sql` がアプリの実動作と噛み合って
+いなかったことです（案件の更新を `created_by` にしか許可していないが実際に
+編集するのは `main_editor`、`completed_urls` にポリシーが無い、など）。
+そのため **017 を消すだけではアプリが動かなくなります**。
+
+`migrations/020_fix_rls_policies.sql` でポリシー全体を設計し直しました。
+現状を確認したい場合は `supabase/check_rls_policies.sql`（読み取り専用）を
+SQL Editor で実行してください。
+
+### 02 / 017 は「歴史的経緯」として残しています
+
+`02_rls_policies.sql` と `017_fix_rls_policies.sql` の内容は
+020 適用後の実態とは一致しません。新規構築時も 020 まで通す前提です。
+
+### 03_functions.sql の関数の多くは未使用です
+
+`approve_project_by_leader` などの承認系関数はフロントエンドから呼ばれておらず、
+かつ `SECURITY DEFINER` + anon に EXECUTE 付きという危険な状態だったため、
+020 で削除しました。現在フロントエンドが使う RPC は
+`generate_*`（ID採番）と `register_new_user` のみです。
