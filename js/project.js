@@ -1214,24 +1214,28 @@ function showAnalysis() {
         <h3>統計・分析機能</h3>
         <p>この機能は今後実装予定です。</p>
 
-        <p style="margin-top: 15px;"><strong>まず作るもの</strong></p>
+        <p style="margin-top: 15px;"><strong>自分の実績</strong></p>
         <ul>
-          <li>自分の編集時間集計（今月・今週・案件別・月別推移）</li>
-          <li>編集目標時間と実働時間の比較、超過案件の一覧</li>
-          <li>案件ステータス別の件数</li>
+          <li>担当案件数・総編集時間・案件あたりの平均編集時間</li>
+          <li>編集目標時間の達成率、目標と実働の差</li>
+          <li>平均稿数、使用技術の内訳</li>
         </ul>
 
-        <p style="margin-top: 15px;"><strong>その後に検討するもの</strong></p>
+        <p style="margin-top: 15px;"><strong>比較</strong></p>
         <ul>
-          <li>月別の案件数推移</li>
-          <li>編集者別・クライアント別の実績</li>
-          <li>ジャンル別の案件分布</li>
-          <li>納期遵守率</li>
+          <li>全体平均・チーム平均との比較</li>
+          <li>（リーダー以上）担当スタッフの実績、チーム間の比較</li>
+        </ul>
+
+        <p style="margin-top: 15px;"><strong>案件の傾向（リーダー以上）</strong></p>
+        <ul>
+          <li>クライアント別・案件別の編集時間と目標超過</li>
+          <li>ジャンル別の目標超過率（乖離しやすいジャンルの把握）</li>
         </ul>
 
         <p style="margin-top: 15px; font-size: 13px; color: #666;">
           表示される範囲は権限によって異なります。<br>
-          アルバイトの方は自分の編集時間のみ、リーダー以上は全案件が対象です。
+          スタッフの方が他の方と比較する場合、個人名は表示されず平均値との比較になります。
         </p>
       </div>
     </div>
