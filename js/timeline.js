@@ -105,8 +105,10 @@ async function loadTimelineData() {
     return;
   }
 
-  // 進行中ステータスのみ
-  const activeStatuses = ['draft', 'submitted', 'leader_approved', 'rejected'];
+  // 編集作業が進行中の案件のみを対象にする。
+  // 上長承認(leader_approved)を受けた時点で案件は完了とみなし、一覧から外す。
+  // executive_approved は承認フローがリーダー1段階のため実際には到達しない。
+  const activeStatuses = ['draft', 'submitted', 'rejected'];
   let allProjects = (result.data || []).filter(p => activeStatuses.includes(p.status));
 
   // マイルストーン一括取得
@@ -201,7 +203,12 @@ function renderTimeline() {
   const projects = getFilteredProjects();
 
   if (projects.length === 0) {
-    container.innerHTML = '<p style="text-align: center; padding: 40px; color: #999;">表示する案件がありません</p>';
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #999;">
+        <p style="margin: 0 0 8px 0;">表示する案件がありません</p>
+        <p style="margin: 0; font-size: 12px;">上長承認済みの案件は表示されません</p>
+      </div>
+    `;
     return;
   }
 
