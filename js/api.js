@@ -1978,25 +1978,6 @@ async function saveEditTime(editTimeData) {
 // ========================================
 
 /**
- * ダッシュボードデータ取得
- */
-async function getDashboardData(userId) {
-  try {
-    const { data, error} = await supabase.rpc('get_dashboard_data', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      return handleSupabaseError(error, 'getDashboardData');
-    }
-
-    return createSuccessResponse(data);
-  } catch (error) {
-    return handleSupabaseError(error, 'getDashboardData');
-  }
-}
-
-/**
  * 納品済プロジェクト取得
  * @param {string} userId - ユーザーID
  * @param {string} dateFrom - 開始日
