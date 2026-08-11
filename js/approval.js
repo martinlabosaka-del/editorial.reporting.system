@@ -85,12 +85,21 @@ async function handleApprovalSearch() {
   const resultsDiv = document.getElementById('approval-search-results');
   resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">検索中...</div>';
 
-  const result = await searchApprovalProjects(criteria);
+  // 例外を捕まえないと「検索中...」の表示が残り続けて操作不能に見えるため、
+  // 必ずここで結果かエラーのどちらかを描画する
+  try {
+    const result = await searchApprovalProjects(criteria);
 
-  if (result.success) {
-    renderApprovalResults(result.data || []);
-  } else {
-    resultsDiv.innerHTML = `<div class="message error">${escapeHtml(result.message)}</div>`;
+    if (result && result.success) {
+      renderApprovalResults(result.data || []);
+    } else {
+      const message = (result && result.message) || '検索に失敗しました';
+      resultsDiv.innerHTML = `<div class="message error">${escapeHtml(message)}</div>`;
+    }
+  } catch (error) {
+    console.error('handleApprovalSearch error:', error);
+    resultsDiv.innerHTML =
+      `<div class="message error">検索に失敗しました: ${escapeHtml(error.message || String(error))}</div>`;
   }
 }
 

@@ -1813,6 +1813,27 @@ async function getProjectDetail(projectId) {
 }
 
 /**
+ * 承認画面用のプロジェクト検索
+ *
+ * 承認ステータス未指定（「すべて」）の場合は、承認の対象になりうる
+ * ステータスに限定する。下書きはまだ申請されていないため除外する。
+ *
+ * @param {Object} criteria - client_id / project_name / main_editor / status
+ */
+async function searchApprovalProjects(criteria) {
+  const params = criteria || {};
+
+  return await searchProjects({
+    client_id: params.client_id,
+    project_name: params.project_name,
+    main_editor: params.main_editor,
+    status: params.status
+      ? params.status
+      : ['submitted', 'rejected', 'leader_approved', 'executive_approved']
+  });
+}
+
+/**
  * 承認用プロジェクト詳細取得（getProjectDetailと同じ）
  */
 async function getProjectForApproval(projectId) {
