@@ -116,7 +116,7 @@ async function loadDashboard(user) {
   // 承認済の案件を取得（leader_approved, executive_approved）
   const approvedResult = await searchProjects({
     main_editor: user.user_id,
-    status: 'leader_approved,executive_approved',
+    status: ['leader_approved', 'executive_approved'],
     delivery_date_from: yearStart,
     delivery_date_to: yearEnd
   });

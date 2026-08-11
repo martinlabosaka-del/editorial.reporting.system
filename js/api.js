@@ -1503,11 +1503,13 @@ async function submitProject(projectId, assignedLeader) {
     if (leaderError) throw leaderError;
 
     // ステータスをsubmittedに更新
+    // submitted_at は承認一覧やダッシュボードの「申請日」表示に使われるため必ず記録する
     const { error: updateError } = await supabase
       .from('projects')
       .update({
         status: 'submitted',
         assigned_leader: leaderUser.id,
+        submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .eq('id', project.id);
@@ -1590,7 +1592,13 @@ async function searchProjects(searchParams) {
     if (searchParams.delivery_date_to) {
       query = query.lte('delivery_date', searchParams.delivery_date_to);
     }
-    if (searchParams.status) {
+    // statusは単一値と配列の両方を受け付ける
+    // （複数ステータスを 'a,b' のような文字列で渡すと完全一致になり0件になるため）
+    if (Array.isArray(searchParams.status)) {
+      if (searchParams.status.length > 0) {
+        query = query.in('status', searchParams.status);
+      }
+    } else if (searchParams.status) {
       query = query.eq('status', searchParams.status);
     }
 
@@ -1620,9 +1628,12 @@ async function searchProjects(searchParams) {
 
 /**
  * 進行中の案件取得（編集時間登録用）
+ * 編集作業中＝draft（下書き）と rejected（上長差戻し）の案件のみを対象とする。
+ * 申請済み（submitted / leader_approved / executive_approved）の案件は
+ * 編集時間を追加できないようにするため除外する。
  * - part_time: サブ編集者として登録されている案件
  * - staff: メイン/サブ編集者として登録されている案件
- * - leader: 全ての進行中案件
+ * - leader: 全ての対象案件
  */
 async function getInProgressProjects() {
   try {
@@ -1637,7 +1648,7 @@ async function getInProgressProjects() {
         *,
         client:clients(client_name, agency_name)
       `)
-      .in('status', ['draft', 'submitted', 'leader_approved', 'executive_approved', 'rejected']);
+      .in('status', ['draft', 'rejected']);
 
     // 権限に応じてフィルタリング
     if (user.role === 'part_time') {
@@ -1832,12 +1843,21 @@ async function saveLeaderEvaluation(evaluationData) {
     const updateData = {
       status: evaluationData.status, // 'leader_approved' or 'rejected'
       leader_comment: evaluationData.leader_comment || null,
-      leader_message: evaluationData.leader_message || null
+      leader_message: evaluationData.leader_message || null,
+      updated_at: new Date().toISOString()
     };
 
-    // 差戻しの場合は理由を保存
     if (evaluationData.status === 'rejected') {
+      // 差戻しの場合は理由を保存
       updateData.leader_rejection_reason = evaluationData.rejection_reason || null;
+    } else {
+      // 承認の場合は承認日時・承認者を記録する
+      // （「上長からのフィードバック」一覧が leader_approved_at で絞り込むため必須）
+      const currentUser = getCurrentUser();
+      updateData.leader_approved_at = new Date().toISOString();
+      updateData.leader_approved_by = currentUser ? currentUser.id : null;
+      // 前回の差戻し理由が残ったままにならないようクリアする
+      updateData.leader_rejection_reason = null;
     }
 
     console.log('updateData:', updateData);

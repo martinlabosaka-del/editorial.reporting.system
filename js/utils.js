@@ -81,18 +81,8 @@ function escapeHtml(text) {
 }
 
 /**
- * ステータスバッジHTML生成
- */
-function createStatusBadge(status) {
-  const labels = {
-    'in_progress': '作業中',
-    'completed': '完了'
-  };
-  return `<span class="status-badge status-${status}">${labels[status] || status}</span>`;
-}
-
-/**
  * 承認ステータスバッジHTML生成
+ * 案件のステータスは draft / submitted / leader_approved / executive_approved / rejected の5種類。
  */
 function createApprovalBadge(status) {
   const labels = {
