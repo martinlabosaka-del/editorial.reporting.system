@@ -62,7 +62,18 @@ function showLoginScreen() {
 // ========================================
 
 /**
+ * メールによるパスワード再設定が有効かどうか
+ * 外部SMTPを設定するまでは false（SETUP_PASSWORD_RESET.md 参照）
+ */
+function isPasswordResetEmailEnabled() {
+  return !!(typeof FEATURES !== 'undefined' && FEATURES.PASSWORD_RESET_EMAIL);
+}
+
+/**
  * パスワード再設定リクエスト画面を表示
+ *
+ * メール送信が無効の間は入力欄を出さず、管理者への連絡案内のみ表示する。
+ * 送れないメールの入力欄を見せると、利用者が届かないメールを待ち続けるため。
  */
 function showForgotPasswordScreen() {
   document.getElementById('login-screen').classList.add('hidden');
@@ -70,8 +81,18 @@ function showForgotPasswordScreen() {
   document.getElementById('reset-password-screen').classList.add('hidden');
   document.getElementById('forgot-password-screen').classList.remove('hidden');
 
-  document.getElementById('forgot-email').value = '';
-  document.getElementById('forgot-password-message').innerHTML = '';
+  const emailSection = document.getElementById('forgot-password-email-section');
+  const adminSection = document.getElementById('forgot-password-admin-section');
+
+  if (isPasswordResetEmailEnabled()) {
+    emailSection.classList.remove('hidden');
+    adminSection.classList.add('hidden');
+    document.getElementById('forgot-email').value = '';
+    document.getElementById('forgot-password-message').innerHTML = '';
+  } else {
+    emailSection.classList.add('hidden');
+    adminSection.classList.remove('hidden');
+  }
 }
 
 /**
@@ -110,6 +131,14 @@ function getPasswordResetRedirectUrl() {
  * パスワード再設定メールの送信
  */
 async function handleForgotPassword() {
+  if (!isPasswordResetEmailEnabled()) {
+    showForgotPasswordMessage(
+      '現在、メールによる再設定は利用できません。管理者にご連絡ください。',
+      'error'
+    );
+    return;
+  }
+
   const email = document.getElementById('forgot-email').value.trim();
 
   if (!email) {

@@ -54,31 +54,57 @@
     <div class="login-container">
       <h1>パスワードの再設定</h1>
 
-      <p style="color: #666; font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
-        登録されているメールアドレスを入力してください。<br>
-        パスワード再設定用のリンクをお送りします。
-      </p>
+      <!-- メール送信による再設定（CONFIG.FEATURES.PASSWORD_RESET_EMAIL が true のときのみ表示） -->
+      <div id="forgot-password-email-section" class="hidden">
+        <p style="color: #666; font-size: 14px; line-height: 1.7; margin-bottom: 20px;">
+          登録されているメールアドレスを入力してください。<br>
+          パスワード再設定用のリンクをお送りします。
+        </p>
 
-      <div class="form-group">
-        <label>メールアドレス</label>
-        <input type="email" id="forgot-email" placeholder="メールアドレスを入力" autocomplete="email">
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <input type="email" id="forgot-email" placeholder="メールアドレスを入力" autocomplete="email">
+        </div>
+
+        <button class="btn btn-primary" onclick="handleForgotPassword()" style="width: 100%;">
+          再設定用リンクを送信
+        </button>
+        <div id="forgot-password-message"></div>
+
+        <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 13px; line-height: 1.7; margin: 0;">
+            <strong>メールが届かない場合</strong><br>
+            迷惑メールフォルダをご確認ください。それでも届かない場合や、
+            登録されているメールアドレスが分からない場合は、
+            システム管理者にご連絡ください。管理者側でパスワードを再設定できます。
+          </p>
+        </div>
       </div>
 
-      <button class="btn btn-primary" onclick="handleForgotPassword()" style="width: 100%;">
-        再設定用リンクを送信
-      </button>
-      <div id="forgot-password-message"></div>
+      <!-- 管理者への連絡案内（メール送信が無効のときに表示） -->
+      <div id="forgot-password-admin-section" class="hidden">
+        <p style="color: #333; font-size: 14px; line-height: 1.8; margin-bottom: 20px;">
+          パスワードの再設定は<strong>システム管理者</strong>が行います。<br>
+          お手数ですが、管理者までご連絡ください。
+        </p>
 
-      <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <div style="background: #f9f9f9; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+          <p style="color: #333; font-size: 13px; font-weight: bold; margin: 0 0 8px 0;">
+            ご連絡の際にお伝えいただきたいこと
+          </p>
+          <ul style="color: #666; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li>お名前</li>
+            <li>ログインに使用しているメールアドレス</li>
+          </ul>
+        </div>
+
         <p style="color: #666; font-size: 13px; line-height: 1.7; margin: 0;">
-          <strong>メールが届かない場合</strong><br>
-          迷惑メールフォルダをご確認ください。それでも届かない場合や、
-          登録されているメールアドレスが分からない場合は、
-          システム管理者にご連絡ください。管理者側でパスワードを再設定できます。
+          管理者が新しいパスワードを設定してお伝えします。<br>
+          ログイン後は、他の人に知られないようご注意ください。
         </p>
       </div>
 
-      <div style="margin-top: 20px; text-align: center;">
+      <div style="margin-top: 25px; text-align: center;">
         <a href="#" onclick="backToLoginScreen(); return false;"
            style="color: #666; font-size: 14px; text-decoration: underline;">
           ログイン画面に戻る

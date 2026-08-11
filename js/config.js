@@ -27,7 +27,23 @@ const CONFIG = {
   // 使用モード
   // 'SUPABASE' - Supabaseを使用（本番環境）
   // 'GAS' - Google Apps Scriptを使用（旧環境、移行期間のみ）
-  MODE: 'SUPABASE'
+  MODE: 'SUPABASE',
+
+  // 機能のON/OFF
+  FEATURES: {
+    // パスワード再設定メールの送信を有効にするか
+    //
+    // false の場合、ログイン画面の「パスワードをお忘れの方」は
+    // 管理者への連絡案内のみを表示する（メールの入力欄を出さない）。
+    //
+    // これを true にする前に、必ず外部SMTPの設定を完了させること。
+    // Supabase内蔵のメール送信はプロジェクトのチームメンバー宛にしか
+    // 届かないため、true にしても一般の利用者には1通も届かず、
+    // 「送信しました」と表示されるだけになる。
+    //
+    // 手順は SETUP_PASSWORD_RESET.md を参照。
+    PASSWORD_RESET_EMAIL: false
+  }
 };
 
 // グローバル変数としてエクスポート
@@ -35,3 +51,4 @@ const API_BASE_URL = CONFIG.API_URL;
 const STORAGE_KEYS = CONFIG.STORAGE_KEYS;
 const SUPABASE_URL = CONFIG.SUPABASE.URL;
 const SUPABASE_ANON_KEY = CONFIG.SUPABASE.ANON_KEY;
+const FEATURES = CONFIG.FEATURES;
