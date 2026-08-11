@@ -176,14 +176,20 @@ async function showProjectRegistration() {
       <div class="modal-content">
         <span class="close" onclick="closeAddClientModal()">&times;</span>
         <h2>クライアント追加</h2>
+        <div style="background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 13px; line-height: 1.6;">
+          <strong>【入力時の注意】</strong><br>
+          クライアント名・代理店名は、<strong>法人格（株式会社・有限会社・合同会社など）を必ず含めて</strong>入力してください。<br>
+          ○ 株式会社〇〇 / 〇〇株式会社 / 有限会社〇〇<br>
+          × 〇〇 ／ 〇〇(株) ／ 〇〇㈱
+        </div>
         <form id="add-client-form">
           <div class="form-group">
             <label>クライアント名 <span style="color: red;">*</span></label>
-            <input type="text" id="new-client-name" required>
+            <input type="text" id="new-client-name" placeholder="例：株式会社〇〇" required>
           </div>
           <div class="form-group">
             <label>代理店名</label>
-            <input type="text" id="new-agency-name">
+            <input type="text" id="new-agency-name" placeholder="例：株式会社〇〇（代理店がない場合は空欄）">
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">追加</button>
@@ -199,14 +205,20 @@ async function showProjectRegistration() {
       <div class="modal-content">
         <span class="close" onclick="closeEditClientModal()">&times;</span>
         <h2>クライアント情報修正</h2>
+        <div style="background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 13px; line-height: 1.6;">
+          <strong>【入力時の注意】</strong><br>
+          クライアント名・代理店名は、<strong>法人格（株式会社・有限会社・合同会社など）を必ず含めて</strong>入力してください。<br>
+          ○ 株式会社〇〇 / 〇〇株式会社 / 有限会社〇〇<br>
+          × 〇〇 ／ 〇〇(株) ／ 〇〇㈱
+        </div>
         <form id="edit-client-form">
           <div class="form-group">
             <label>クライアント名 <span style="color: red;">*</span></label>
-            <input type="text" id="edit-client-name" required>
+            <input type="text" id="edit-client-name" placeholder="例：株式会社〇〇" required>
           </div>
           <div class="form-group">
             <label>代理店名</label>
-            <input type="text" id="edit-client-agency-name">
+            <input type="text" id="edit-client-agency-name" placeholder="例：株式会社〇〇（代理店がない場合は空欄）">
           </div>
           <div class="btn-group">
             <button type="submit" class="btn btn-primary">更新</button>
