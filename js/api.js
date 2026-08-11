@@ -2190,7 +2190,12 @@ async function updateUser(userId, userData) {
 }
 
 /**
- * ユーザーパスワードリセット
+ * ユーザーパスワードリセット（管理者のみ）
+ *
+ * supabase.auth.admin.updateUserById() は service_role キーを必要とするが、
+ * 公開フロントエンドには anon key しか置けないため使えない。
+ * 管理者チェック付きの SECURITY DEFINER 関数(021)をRPCで呼ぶ。
+ * 権限の最終判定はサーバー側で行われるため、下のチェックはUI用の早期リターン。
  */
 async function resetUserPassword(userId, newPassword) {
   try {
@@ -2199,28 +2204,24 @@ async function resetUserPassword(userId, newPassword) {
       return { success: false, message: '管理者権限が必要です' };
     }
 
-    // user_idからauth_user_idを取得
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('auth_user_id')
-      .eq('user_id', userId)
-      .single();
+    const { data, error } = await supabase.rpc('admin_reset_user_password', {
+      p_user_id: userId,
+      p_new_password: newPassword
+    });
 
-    if (userError || !user) {
-      return { success: false, message: 'ユーザーが見つかりません' };
+    if (error) {
+      return handleSupabaseError(error, 'resetUserPassword');
     }
 
-    // Supabase Authでパスワードを更新
-    const { error: authError } = await supabase.auth.admin.updateUserById(
-      user.auth_user_id,
-      { password: newPassword }
-    );
-
-    if (authError) {
-      return handleSupabaseError(authError, 'resetUserPassword');
+    // 関数は { success, message } のjsonbを返す
+    if (!data || !data.success) {
+      return {
+        success: false,
+        message: (data && data.message) || 'パスワードのリセットに失敗しました'
+      };
     }
 
-    return createSuccessResponse(null, 'パスワードをリセットしました');
+    return createSuccessResponse(null, data.message);
   } catch (error) {
     return handleSupabaseError(error, 'resetUserPassword');
   }

@@ -16,11 +16,12 @@
 | 1 | `00_setup_all.sql` 〜 `15_check_estimate_breakdown.sql` | 2026-01-06 |
 | 2 | `migrations/004_*.sql`, `migrations/015_add_leader_comment.sql` | 2026-01-06 |
 | 3 | `migrations/016_create_user_registration_function.sql` | 2026-01-06 |
-| 4 | `migrations/017_fix_rls_policies.sql` | 2026-01-06 |
+| 4 | ~~`migrations/017_fix_rls_policies.sql`~~（削除済み） | 2026-01-06 |
 | 5 | `migrations/018_add_editor_admin_flags_to_registration.sql` | 2026-01-08 |
 | 6 | `16_add_affiliations_teams.sql` 〜 `20_add_milestone_memo.sql` | 2026-02-12〜13 |
 | 7 | `migrations/019_secure_user_registration.sql` | 2026-08-11 |
 | 8 | `migrations/020_fix_rls_policies.sql` | 2026-08-11 |
+| 9 | `migrations/021_admin_reset_password.sql` | 2026-08-11 |
 
 `00_setup_all.sql` は `01`〜`05` をまとめた初期構築用です。
 新規構築では `00` のみ、既存DBへは `01` 以降を個別に適用します。
@@ -29,31 +30,29 @@
 
 ## 今後のルール
 
-新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `021_`）。
+新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `022_`）。
 `supabase/` 直下の2桁番号は追加しません。
 
 ## 既知の注意点
 
-### RLS は 020 で作り直しています
+### RLS は 020 で作り直し、02 に反映済みです
 
-`migrations/017_fix_rls_policies.sql` は `projects` / `edit_history` /
+かつて `migrations/017_fix_rls_policies.sql` が `projects` / `edit_history` /
 `estimate_breakdown` / `completed_urls` に `USING (true) WITH CHECK (true)` の
 ポリシーを追加していました。PostgreSQL の permissive ポリシーは OR で結合されるため、
-`02_rls_policies.sql` の細かい制限は事実上無効化されていました。
+細かい制限は事実上すべて無効化されていました。
 
-017 がこうなった原因は `02_rls_policies.sql` がアプリの実動作と噛み合って
+017 がこうなった原因は、旧 `02_rls_policies.sql` がアプリの実動作と噛み合って
 いなかったことです（案件の更新を `created_by` にしか許可していないが実際に
 編集するのは `main_editor`、`completed_urls` にポリシーが無い、など）。
-そのため **017 を消すだけではアプリが動かなくなります**。
 
-`migrations/020_fix_rls_policies.sql` でポリシー全体を設計し直しました。
-現状を確認したい場合は `supabase/check_rls_policies.sql`（読み取り専用）を
-SQL Editor で実行してください。
+`migrations/020_fix_rls_policies.sql` で全体を設計し直し、
+**`02_rls_policies.sql` もその結果に書き直しました**。017 は役目を終えたため削除しています。
 
-### 02 / 017 は「歴史的経緯」として残しています
+- **新規構築** … `01_schema.sql` → `02_rls_policies.sql` で現行の状態になります
+- **既存DB** … 020 適用済みなので追加作業は不要です
 
-`02_rls_policies.sql` と `017_fix_rls_policies.sql` の内容は
-020 適用後の実態とは一致しません。新規構築時も 020 まで通す前提です。
+現状確認は `supabase/check_rls_policies.sql`（読み取り専用）を SQL Editor で実行してください。
 
 ### 03_functions.sql の関数の多くは未使用です
 

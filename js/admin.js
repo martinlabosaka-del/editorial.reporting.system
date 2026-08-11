@@ -266,7 +266,8 @@ async function showAdminScreen() {
           </div>
           <div class="form-group">
             <label>新しいパスワード <span style="color: red;">*</span></label>
-            <input type="password" id="reset-new-password" required>
+            <input type="password" id="reset-new-password" required minlength="8" autocomplete="new-password">
+            <small style="color: #666;">8文字以上。リセット後、そのユーザーは既存のログイン状態が解除されます。</small>
           </div>
           <div class="btn-group">
             <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">キャンセル</button>
