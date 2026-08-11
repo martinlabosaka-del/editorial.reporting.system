@@ -1117,7 +1117,10 @@ async function saveProject(projectData) {
         technologies: projectData.technologies || [],
         estimate_pdf_url: estimatePdfUrl,
         estimate_number: projectData.estimate_number,
+        // estimate_total は編集費内訳の自動合計
+        // estimate_grand_total は編集費以外を含む見積書全体の合計（手入力）
         estimate_total: estimateTotal,
+        estimate_grand_total: projectData.estimate_grand_total ?? null,
         target_hours: targetHours,
         file_storage_url: projectData.file_storage_url,
         other_notes: projectData.other_notes,
@@ -1284,6 +1287,7 @@ async function updateProject(projectData) {
         estimate_pdf_url: estimatePdfUrl,
         estimate_number: projectData.estimate_number,
         estimate_total: projectData.estimate_total,
+        estimate_grand_total: projectData.estimate_grand_total ?? null,
         file_storage_url: projectData.file_storage_url,
         reflection: projectData.reflection,
         main_editor_message: projectData.main_editor_message,

@@ -66,6 +66,23 @@ function formatNumber(num) {
 }
 
 /**
+ * 金額入力欄の値を数値に変換
+ * 未入力は null（DBのNULL＝未入力）として扱い、0と区別する
+ */
+function parseAmountInput(value) {
+  if (value === null || value === undefined) return null;
+
+  const trimmed = String(value).trim();
+  if (trimmed === '') return null;
+
+  // カンマ付きで入力された場合にも対応
+  const parsed = Number(trimmed.replace(/,/g, ''));
+  if (!isFinite(parsed) || parsed < 0) return null;
+
+  return Math.round(parsed);
+}
+
+/**
  * HTMLエスケープ
  */
 function escapeHtml(text) {

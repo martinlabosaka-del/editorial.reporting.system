@@ -285,6 +285,13 @@ async function showApprovalDetail(projectId) {
       </div>
 
       <div class="form-group">
+        <label>見積合計金額</label>
+        <p>${project.estimate_grand_total != null
+              ? '¥' + formatNumber(Math.round(project.estimate_grand_total))
+              : '<span style="color: #999;">未入力</span>'}</p>
+      </div>
+
+      <div class="form-group">
         <label>編集費内訳</label>
         ${project.estimate_breakdown && project.estimate_breakdown.length > 0 ? `
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">

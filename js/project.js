@@ -150,6 +150,14 @@ async function showProjectRegistration() {
         </div>
 
         <div class="form-group">
+          <label>見積合計金額</label>
+          <input type="number" id="estimate-grand-total" placeholder="例：500000" min="0" step="1">
+          <small style="color: #666;">
+            編集費以外（撮影費・機材費・諸経費など）を含む、見積書全体の合計金額を入力してください。
+          </small>
+        </div>
+
+        <div class="form-group">
           <label>編集費内訳</label>
           <div id="estimate-breakdown"></div>
           <button type="button" class="add-row-btn" onclick="addEstimateRow()">+ 行追加</button>
@@ -371,6 +379,7 @@ async function handleProjectSubmit() {
     genres: genres,
     technologies: technologies,
     estimate_number: document.getElementById('estimate-number').value,
+    estimate_grand_total: parseAmountInput(document.getElementById('estimate-grand-total').value),
     estimate_breakdown: breakdown
   };
 
@@ -1016,6 +1025,13 @@ async function showProjectDetail(projectId) {
             <button type="button" class="btn btn-secondary btn-sm" onclick="viewPdf('${escapeHtml(project.estimate_pdf_url)}')">PDFを表示</button>
           </div>
         ` : '<p style="color: #999;">PDFが登録されていません</p>'}
+      </div>
+
+      <div class="form-group">
+        <label>見積合計金額</label>
+        <p>${project.estimate_grand_total != null
+              ? '¥' + formatNumber(Math.round(project.estimate_grand_total))
+              : '<span style="color: #999;">未入力</span>'}</p>
       </div>
 
       <div class="form-group">

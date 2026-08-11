@@ -156,6 +156,16 @@ async function showProjectEditScreen(projectId) {
         </div>
 
         <div class="form-group">
+          <label>見積合計金額</label>
+          <input type="number" id="edit-estimate-grand-total"
+                 value="${project.estimate_grand_total != null ? Math.round(project.estimate_grand_total) : ''}"
+                 placeholder="例：500000" min="0" step="1">
+          <small style="color: #666;">
+            編集費以外（撮影費・機材費・諸経費など）を含む、見積書全体の合計金額
+          </small>
+        </div>
+
+        <div class="form-group">
           <label>編集費内訳 <span style="color: red;">*</span></label>
           <div id="edit-estimate-breakdown"></div>
           <button type="button" class="add-row-btn" onclick="addEditEstimateRow()">+ 行追加</button>
@@ -774,9 +784,14 @@ async function saveProjectEdit() {
     }
   });
 
-  // 見積合計
+  // 編集費合計（内訳からの自動計算）
   const estimateTotalText = document.getElementById('edit-estimate-total').textContent;
   const estimateTotal = parseInt(estimateTotalText.replace(/[^0-9]/g, '')) || 0;
+
+  // 見積合計金額（編集費以外を含む手入力値）
+  const estimateGrandTotal = parseAmountInput(
+    document.getElementById('edit-estimate-grand-total').value
+  );
 
   // 追加編集時間
   const newEditTimes = [];
@@ -813,6 +828,7 @@ async function saveProjectEdit() {
     estimate_number: estimateNumber,
     estimate_breakdown: estimateBreakdown,
     estimate_total: estimateTotal,
+    estimate_grand_total: estimateGrandTotal,
     reflection: reflection,
     main_editor_message: mainEditorMessage,
     other_notes: otherNotes,
