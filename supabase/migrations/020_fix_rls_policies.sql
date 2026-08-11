@@ -443,15 +443,21 @@ CREATE POLICY "notifications_insert_authenticated"
 -- (1) 素通しポリシーが残っていないか
 --     projects / edit_history / estimate_breakdown / completed_urls /
 --     users / project_milestones が消えていればOK。
---     affiliations_select / teams_select / milestone_types_select /
---     notifications_insert_authenticated は意図的に true なので残る。
+--     残ってよいのは以下の5件（いずれも意図的）:
+--       affiliations_select, teams_select, milestone_types_select … マスタの閲覧
+--       milestone_types_insert                                    … 編集者が工程を追加
+--       notifications_insert_authenticated                        … 通知の作成
 --
--- SELECT tablename, policyname, cmd, qual, with_check
+-- SELECT tablename, policyname, cmd, roles, qual, with_check
 -- FROM pg_policies
 -- WHERE schemaname = 'public'
 --   AND permissive = 'PERMISSIVE'
---   AND (COALESCE(qual, 'true') IN ('true', '(true)')
---        OR COALESCE(with_check, 'true') IN ('true', '(true)'))
+--   AND (
+--     (cmd IN ('SELECT', 'DELETE') AND qual IN ('true', '(true)'))
+--     OR (cmd = 'INSERT' AND with_check IN ('true', '(true)'))
+--     OR (cmd IN ('UPDATE', 'ALL')
+--         AND (qual IN ('true', '(true)') OR with_check IN ('true', '(true)')))
+--   )
 -- ORDER BY tablename, cmd;
 
 -- (2) anon から呼べる SECURITY DEFINER 関数が register_new_user 以外に無いか

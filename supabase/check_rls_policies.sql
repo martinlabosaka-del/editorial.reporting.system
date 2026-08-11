@@ -36,19 +36,29 @@ ORDER BY tablename, cmd, policyname;
 -- (2) 素通しポリシーの抽出
 -- ========================================
 -- ここに出たものが「実質ノーガード」になっている原因。
+--
+-- 判定はコマンドごとに見る式が違う点に注意：
+--   SELECT / DELETE … qual だけが効く（with_check は常にNULL）
+--   INSERT         … with_check だけが効く（qual は常にNULL）
+--   UPDATE / ALL   … 両方が効く
+-- COALESCE(qual,'true') のように一括で判定すると、
+-- 「INSERTポリシーだから qual が NULL」なだけの健全なポリシーまで拾ってしまう。
 
 SELECT
   tablename,
   policyname,
   cmd,
+  roles,
   qual       AS using_expr,
   with_check AS with_check_expr
 FROM pg_policies
 WHERE schemaname = 'public'
   AND permissive = 'PERMISSIVE'
   AND (
-    COALESCE(qual, 'true') IN ('true', '(true)')
-    OR COALESCE(with_check, 'true') IN ('true', '(true)')
+    (cmd IN ('SELECT', 'DELETE') AND qual IN ('true', '(true)'))
+    OR (cmd = 'INSERT' AND with_check IN ('true', '(true)'))
+    OR (cmd IN ('UPDATE', 'ALL')
+        AND (qual IN ('true', '(true)') OR with_check IN ('true', '(true)')))
   )
 ORDER BY tablename, cmd;
 
