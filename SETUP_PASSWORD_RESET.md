@@ -68,9 +68,115 @@ Supabase ダッシュボード → **Project Settings** → **Authentication** �
 Resend、SendGrid、Amazon SES などの外部SMTPを設定してください。
 20名規模なら無料枠で十分です（例: Resend は月3,000通・1日100通まで無料）。
 
+Resend を使う場合の具体的な手順は下記「2-A」を参照してください。
+
 設定後、**Authentication → Rate Limits** の
 「Rate limit for sending emails」も必要に応じて調整してください
 （内蔵サービスの2通/時はSMTP設定後に解除されます）。
+
+---
+
+## 2-A. Resend を外部SMTPとして設定する
+
+### ⚠️ 前提: 独自ドメインが必須です
+
+**Resend でメールを送るには、自分が所有するドメインの登録と
+DNS認証が必要です。** 公式ドキュメントに明記されています。
+
+> You must add and verify at least one domain to send emails with Resend.
+> （[Verified Domains](https://resend.com/docs/dashboard/domains/introduction)）
+
+Resend の初期画面に出てくる送信元 `onboarding@resend.dev` は
+**テスト専用**で、**Resendアカウントに登録したメールアドレス宛にしか
+送信できません。** それ以外の宛先は 403 エラーになります。
+（[403 Error Using resend.dev Domain](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain)）
+
+つまり `onboarding@resend.dev` のままだと、
+`martinlab.osaka@gmail.com` にしかメールが届きません。
+**Supabase内蔵SMTPと全く同じ制約に引っかかります。**
+外部SMTPに乗り換える意味が無くなるので、必ずドメインを用意してください。
+
+**gmail.com のような他人のドメインは認証できません**
+（DNSレコードを設定できないため）。会社で所有しているドメインを使うか、
+無ければ取得してください（年1,000〜2,000円程度）。
+
+ドメインを用意できない場合は、メール経路は諦めて
+`migrations/021_admin_reset_password.sql` の管理者リセットで運用してください。
+20名規模なら十分に回ります。
+
+### 手順1: ドメインを追加してDNSを認証する
+
+1. Resend → **Domains** → **Add Domain**
+2. ドメイン名を入力
+   - **ルートドメインではなくサブドメインを推奨**（例: `send.example.com`）
+   - 送信の評判をコーポレートサイトのメールと分離できるため
+3. リージョンを選ぶ（日本からなら Tokyo が近いですが、どこでも動きます）
+4. 表示された DNS レコードを、ドメインを管理しているDNS
+   （お名前.com、Cloudflare、Route 53 など）に登録する
+
+登録するのは次の3種類です。値は Resend の画面に表示されたものを使ってください。
+
+| 種別 | 用途 |
+|---|---|
+| **MX** | バウンス・苦情の受信（`feedback-smtp.<region>.amazonses.com`） |
+| **TXT (SPF)** | 送信元サーバーの認証（`v=spf1 include:amazonses.com ~all`） |
+| **TXT (DKIM)** | 電子署名（`resend._domainkey` に長い公開鍵） |
+
+5. **Verify** を押して認証されるのを待つ（数分〜最大48時間、通常は数分）
+
+> **よくある失敗**: MXレコードの値が
+> `feedback-smtp.us-east-1.amazonses.com.example.com` のように
+> 自ドメインが後ろに付いてしまう場合は、値の末尾にピリオド `.` を付けて
+> `feedback-smtp.us-east-1.amazonses.com.` としてください。
+> 末尾のピリオドが「これは完全修飾名なので加工するな」という意味になります。
+> （[What if my domain is not verifying?](https://resend.com/docs/knowledge-base/what-if-my-domain-is-not-verifying)）
+
+### 手順2: API キーを発行する
+
+1. Resend → **API keys** → **Create API Key**
+2. 権限は **Sending access** で十分（Full access は不要）
+3. 表示された `re_` で始まるキーをコピー
+   **この画面を閉じると二度と表示されません。** 必ず控えてください
+
+### 手順3: Supabase に SMTP を設定する
+
+Supabase ダッシュボード → **Project Settings** → **Authentication**
+→ **SMTP Settings** → **Enable Custom SMTP** をオン
+
+| 項目 | 設定値 |
+|---|---|
+| Sender email | `noreply@send.example.com`（**認証したドメインのアドレス**） |
+| Sender name | `編集報告システム` |
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend`（固定文字列。メールアドレスではありません） |
+| Password | 手順2で発行した APIキー（`re_...`） |
+
+（[Send with SMTP](https://resend.com/docs/send-with-smtp)）
+
+ポートは `465` / `2465` が暗号化必須（implicit TLS）、
+`25` / `587` / `2587` が平文開始→暗号化（STARTTLS）です。
+**Supabase からは `465` を推奨**します。
+
+> **Username を間違えやすいので注意。**
+> メールアドレスではなく、`resend` という固定の文字列です。
+
+> **Sender email は必ず認証済みドメインのアドレスにしてください。**
+> gmail.com などのアドレスを入れると送信が拒否されます。
+> 受信は不要なので、実在しない `noreply@` で構いません。
+
+### 手順4: 動作確認
+
+Supabase の SMTP 設定画面で保存した後、
+アプリのログイン画面 →「パスワードをお忘れの方」から
+**自分以外のメールアドレス**で試してください。
+自分のアドレスだけだと、resend.dev の制約に引っかかっているのか
+正しく動いているのかが区別できません。
+
+送信の成否は Resend → **Logs** で確認できます。
+ここに記録が無ければ Supabase から送信自体が行われていません
+（SMTP設定の誤り）。記録があって届いていなければ受信側の問題です
+（迷惑メール振り分けなど）。
 
 ## 3. メール文面の日本語化（任意）
 
