@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>編集報告システム</title>
 
+  <!-- このHTML自体はキャッシュさせない。
+       JS/CSSは下部の ?v=... で更新するが、その番号を持つこのファイルが
+       キャッシュされると古い番号のまま＝古いJSを読み続けてしまうため。 -->
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+
   <!-- 検索エンジンのインデックス化を防止 -->
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
   <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
