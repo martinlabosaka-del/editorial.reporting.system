@@ -49,6 +49,19 @@
 -- ========================================
 -- STEP 2. ベースライン登録
 -- ========================================
+--
+-- 【実行時に出るダイアログについて】
+-- SQL Editor で「Potential issue detected / This query creates a table
+-- without enabling Row Level Security」と警告が出ますが、
+-- **「Run without RLS」を選んでください。**
+--
+-- CREATE TABLE を見ると必ず出る汎用の警告で、今回は当てはまりません:
+--  ・このテーブルは public ではなく supabase_migrations スキーマにある。
+--    PostgREST が公開するのは public / graphql_public / storage だけなので、
+--    anon キーでも REST 経由では到達できない
+--  ・作ったばかりのスキーマで anon / authenticated に GRANT していない
+--  ・Supabase CLI 自身もこのテーブルを RLS 無しで作る。ここだけ形を変えると
+--    将来 CLI と挙動が食い違ったときの切り分けが増える
 
 CREATE SCHEMA IF NOT EXISTS supabase_migrations;
 
