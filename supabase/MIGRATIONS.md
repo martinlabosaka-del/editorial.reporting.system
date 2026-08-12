@@ -3,10 +3,8 @@
 SQLの適用は **GitHub Actions で自動化されています**。
 SQL Editor に手でコピペする運用は終了しました。
 
-> **有効化の前に**
-> リポジトリ変数 `DB_MIGRATE_ENABLED` が `true` になるまで、自動適用は動きません。
-> 有効化の手順は `.github/workflows/db-migrate.yml` の冒頭コメントを参照してください。
-> 順番として、**必ず `BASELINE.sql` を先に流してください**。
+初期設定は 2026-08-12 に完了しています。
+環境を作り直す場合の手順は [`SETUP_AUTO_MIGRATE.md`](./SETUP_AUTO_MIGRATE.md) を参照してください。
 
 ## ディレクトリの役割
 
@@ -15,7 +13,8 @@ SQL Editor に手でコピペする運用は終了しました。
 | `migrations/` | スキーマ・データの変更 | **される** |
 | `queries/` | 状態確認用の読み取り専用クエリ | されない |
 | `archive/` | 役目を終えたファイル | されない |
-| `BASELINE.sql` | 台帳の初期登録（一度きり・手動） | されない |
+| `BASELINE.sql` | 台帳の初期登録（一度きり・手動・適用済み） | されない |
+| `SETUP_AUTO_MIGRATE.md` | 自動適用の初期設定手順 | — |
 
 ## 新しいSQLを追加する手順
 
