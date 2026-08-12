@@ -35,24 +35,19 @@
 1. **Supabase Studioを開く**
    - 左メニューから「SQL Editor」を選択
 
-2. **スキーマを実行**
+2. **マイグレーションを実行**
 
-   以下の順序でSQLファイルを実行します：
+   `supabase/migrations/` のファイルを **ファイル名の昇順に頭から全て** 実行します。
+   ファイル名の先頭14桁が適用順です。テーブル・RLS・関数・初期データが順に作られます。
 
-   a. **テーブル作成**
-   ```sql
-   -- supabase/01_schema.sql の内容をコピー＆ペースト
+   Supabase CLI が使えるなら1コマンドで済みます:
+
+   ```bash
+   supabase db push --db-url "<接続文字列>"
    ```
 
-   b. **RLSポリシー設定**
-   ```sql
-   -- supabase/02_rls_policies.sql の内容をコピー＆ペースト
-   ```
-
-   c. **関数とトリガー**
-   ```sql
-   -- supabase/03_functions.sql の内容をコピー＆ペースト
-   ```
+   > 既存の本番DBへの変更は、この手順ではなく GitHub Actions が自動で行います。
+   > 詳細は `supabase/MIGRATIONS.md` を参照してください。
 
 3. **実行確認**
    - 左メニューから「Table Editor」を選択
@@ -68,9 +63,9 @@
    - File size limit: 10MB
 
 2. **ストレージポリシー設定**
-   ```sql
-   -- supabase/04_storage_setup.sql の内容をSQL Editorで実行
-   ```
+
+   Step 2 のマイグレーション適用で設定済みです
+   （`20260106120400_04_storage_setup.sql` / `20260106121100_10_storage_setup.sql`）。
 
 ### Step 4: 初期データの投入
 

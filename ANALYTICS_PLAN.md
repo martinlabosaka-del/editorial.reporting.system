@@ -127,7 +127,7 @@
 - 内訳を全部消した場合に古い行が残っていた不具合もあわせて直しました
   （目標時間0なのに内訳が残る状態を防ぐ）。
 
-- 既存案件のずれは `supabase/migrations/023_recalculate_target_hours.sql` を
+- 既存案件のずれは `supabase/migrations/20260812102858_023_recalculate_target_hours.sql` を
   Supabase の SQL Editor で実行して再計算済みです（2026-08-11 適用）。
   同ファイルの STEP 3 のクエリで、不一致が0件であることを再確認できます。
 
@@ -202,7 +202,7 @@ get_evaluation_summary(期間, 対象範囲)
 > `SECURITY DEFINER` は RLS を迂回します。020 で危険な関数を削除した経緯があるため、
 > **関数内で必ず `auth.uid()` から呼び出し元の権限を確認し、
 > `anon` からの EXECUTE を REVOKE** してください。
-> `migrations/021_admin_reset_password.sql` が実装の雛形になります。
+> `migrations/20260811120052_021_admin_reset_password.sql` が実装の雛形になります。
 
 ---
 
@@ -214,7 +214,7 @@ get_evaluation_summary(期間, 対象範囲)
 
 1. ~~`updateProject()` で `target_hours` を再計算（課題1）~~ ✅ 2026-08-11 完了
 2. ~~既存案件の `target_hours` を再計算するSQLを流す~~ ✅ 2026-08-11 適用済み
-   （`migrations/023_recalculate_target_hours.sql`）
+   （`migrations/20260812102858_023_recalculate_target_hours.sql`）
 3. `teams.leader_id` を追加し、担当リーダーを設定（課題3）
 4. `project_milestones` に稿数の数値カラムを追加し、既存データを移行（課題2）
 

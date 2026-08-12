@@ -26,25 +26,21 @@
 
 ## 🗄️ ステップ3: データベースセットアップ (5分)
 
-### 3-1. 統合SQLを実行
+[`supabase/migrations/`](./supabase/migrations/) を **ファイル名順に頭から全て** 流します。
+テーブル・RLS・関数・初期データが順に作られます。
 
-1. Supabase Studio左メニュー > **SQL Editor** をクリック
-2. "New query" をクリック
-3. [`supabase/00_setup_all.sql`](./supabase/00_setup_all.sql) の内容を全てコピー
-4. ペーストして **Run** をクリック
-5. "セットアップが完了しました！" メッセージを確認
+Supabase CLI が使える場合はこれだけです:
 
-### 3-2. RLSポリシーを設定
+```bash
+supabase db push --db-url "<接続文字列>"
+```
 
-1. SQL Editorで "New query"
-2. [`supabase/02_rls_policies.sql`](./supabase/02_rls_policies.sql) をコピー＆ペースト
-3. **Run** をクリック
+CLI を使わない場合は、SQL Editor で `migrations/` のファイルを
+**ファイル名の昇順に1本ずつ** 実行してください。
+ファイル名の先頭14桁が適用順です。順番を変えると失敗します。
 
-### 3-3. PostgreSQL関数を作成
-
-1. SQL Editorで "New query"
-2. [`supabase/03_functions.sql`](./supabase/03_functions.sql) をコピー＆ペースト
-3. **Run** をクリック
+> 既存の本番DBへの変更は、この手順ではなく GitHub Actions が自動で行います。
+> 詳細は [`supabase/MIGRATIONS.md`](./supabase/MIGRATIONS.md) を参照してください。
 
 ## 📦 ステップ4: Storageセットアップ (2分)
 
@@ -56,7 +52,8 @@
    - **File size limit**: `10`
    - **Allowed MIME types**: `application/pdf`
 4. "Create bucket" をクリック
-5. SQL Editorで [`supabase/04_storage_setup.sql`](./supabase/04_storage_setup.sql) を実行（ポリシー設定）
+5. ポリシーはステップ3の `migrations/` 適用で設定済みです
+   （`20260106120400_04_storage_setup.sql` / `20260106121100_10_storage_setup.sql`）
 
 ## 👤 ステップ5: テストユーザー作成 (2分)
 

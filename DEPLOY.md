@@ -70,9 +70,12 @@ curl -s https://martinlabosaka-del.github.io/editorial.reporting.system/js/proje
 
 ## データベースの変更を伴う場合
 
-`supabase/migrations/` にSQLを追加した場合は、
-**プッシュとは別に** Supabase ダッシュボードの SQL Editor で
-実行する必要があります。適用順は `supabase/MIGRATIONS.md` を参照してください。
+`supabase/migrations/` にSQLを追加した場合は、GitHub Actions の
+**DB migrate** ワークフローが適用します。SQL Editor での手作業は不要です。
+`main` にマージすると承認待ちで止まるので、Actions の画面で承認してください。
+書き方と注意点は `supabase/MIGRATIONS.md` を参照してください。
 
-カラム追加を伴う変更では、**SQLを先に適用してからプッシュ**してください。
-逆にすると、カラムが無い状態で新しいJSが動いて保存エラーになります。
+カラム追加を伴う変更では、**SQLの適用を先に済ませてから**画面を確認してください。
+逆になると、カラムが無い状態で新しいJSが動いて保存エラーになります。
+JS/CSS は GitHub Pages のキャッシュで最大10分遅れて反映されるため、
+承認を先に済ませておけば自然とこの順序になります。

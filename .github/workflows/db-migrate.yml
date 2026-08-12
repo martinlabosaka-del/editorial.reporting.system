@@ -1,0 +1,115 @@
+# ========================================
+# データベースマイグレーションの自動適用
+# ========================================
+#
+# これまで supabase/*.sql は Supabase の SQL Editor に手でコピペして
+# 実行していました。番号体系が2系統あり、順番を間違えると壊れるうえ、
+# 作業できる人が限られていました。
+#
+# このワークフローは supabase/migrations/ の未適用ファイルだけを
+# 自動で流します。「どれが適用済みか」は DB 側の
+# supabase_migrations.schema_migrations が持っているので、
+# 人が順番を覚えておく必要がなくなります。
+#
+# ■ 動き
+#   プルリクエスト … --dry-run で「何が流れるか」だけを出す（DBは変更しない）
+#   main にマージ  … production 環境の承認待ちで止まり、承認すると適用
+#
+# ■ なぜ全自動にしないか
+#   023 のような全件 UPDATE を含むデータ移行が誤って走ると戻せません。
+#   Supabase CLI には down マイグレーションが無く、PITR も有料プラン限定です。
+#   「順番を間違える」危険は仕組みで潰しつつ、流す判断は人が持ちます。
+#
+# ■ 事前準備（一度きり）
+#   1. supabase/BASELINE.sql を SQL Editor で実行
+#      → 手動適用済みの30本を「適用済み」として台帳に登録する。
+#        これをやらずに動かすと最初から全部流れて壊れます。
+#   2. GitHub の Settings → Secrets → Actions に SUPABASE_DB_URL を登録
+#      → Supabase の Project Settings → Database の接続文字列。
+#        GitHub Actions のランナーは IPv4 なので、direct connection ではなく
+#        Connection Pooler（Session mode）の URL を使ってください。
+#   3. Settings → Environments で production を作り、
+#      Required reviewers に承認者を設定
+#   4. Settings → Secrets and variables → Actions → Variables で
+#      DB_MIGRATE_ENABLED = true を登録
+#      → これを設定するまで適用ジョブは動きません（安全装置）
+#
+# ■ CLI のバージョンは latest です
+#   CLI 側の変更で急に動かなくなった場合は、setup-cli の version を
+#   直前に動いていたバージョン番号に固定してください。
+# ========================================
+
+name: DB migrate
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+  # 手動実行。マイグレーションを含まない変更で流し直したいとき用
+  workflow_dispatch:
+
+# 同時に2本走ると適用順が乱れるため、後から来たものを待たせる
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+jobs:
+  # プルリク時: 何が流れるかを表示するだけ。DBには触らない
+  dry-run:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: 適用予定の確認（DBは変更しません）
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+  # main へのマージ時: 承認を挟んでから適用
+  apply:
+    # DB_MIGRATE_ENABLED が 'true' でないと動きません。
+    # 準備を終える前に走ると、台帳が空なので全マイグレーションを
+    # 最初から適用しようとして壊れます。そのための安全装置です。
+    # 準備1〜3が済んだら Settings → Secrets and variables → Actions →
+    # Variables で DB_MIGRATE_ENABLED = true を追加して有効化してください。
+    if: github.event_name != 'pull_request' && vars.DB_MIGRATE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    # ここで承認待ちになる。Settings → Environments で
+    # Required reviewers を設定していないと素通りするので注意
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: 適用予定の確認
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      # --include-all は付けていません。
+      # 「既に適用したものより古いタイムスタンプ」のファイルが混ざると
+      # ここで失敗します。順番の取り違えに気づくための壁なので、
+      # 失敗したらファイル名の日時を見直してください。
+      - name: マイグレーション適用
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      # 確認用。ここが失敗しても適用自体は済んでいるので止めない
+      - name: 適用後の一覧
+        continue-on-error: true
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

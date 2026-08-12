@@ -1,0 +1,6 @@
+# Supabase CLI の設定ファイル。
+# GitHub Actions から `supabase db push` を動かすために必要です。
+#
+# 接続情報はここには書きません。CI 側で GitHub Secrets の
+# SUPABASE_DB_URL を --db-url に渡しています。
+project_id = "hrywcftzbturamsuoizb"

@@ -62,11 +62,8 @@
 # https://supabase.com でプロジェクト作成
 
 # 2. データベーススキーマを適用
-# Supabase Studio > SQL Editor で以下を実行:
-# - supabase/01_schema.sql
-# - supabase/02_rls_policies.sql
-# - supabase/03_functions.sql
-# - supabase/04_storage_setup.sql
+#    supabase/migrations/ を頭から全て流す
+supabase db push --db-url "<接続文字列>"
 
 # 3. 設定ファイルを更新
 # frontend/js/config.js でSupabase URLとAPIキーを設定
@@ -84,10 +81,12 @@ npx http-server -p 8080
 ```
 code/
 ├── supabase/                    # Supabaseスキーマとポリシー
-│   ├── 01_schema.sql           # テーブル定義
-│   ├── 02_rls_policies.sql     # Row Level Security設定
-│   ├── 03_functions.sql        # PostgreSQL関数とトリガー
-│   └── 04_storage_setup.sql    # ストレージ設定
+│   ├── migrations/             # 自動適用されるSQL（ファイル名順）
+│   ├── queries/                # 状態確認用（読み取り専用・適用されない）
+│   ├── archive/                # 役目を終えたSQL
+│   ├── BASELINE.sql            # 台帳の初期登録（一度きり・手動）
+│   ├── config.toml             # Supabase CLI設定
+│   └── MIGRATIONS.md           # 追加手順と過去の経緯
 │
 ├── frontend/                    # フロントエンド
 │   ├── index.html              # メインHTML
