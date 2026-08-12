@@ -160,7 +160,10 @@ async function showApprovalDetail(projectId) {
 
   showLoading('approval-detail-screen');
 
-  const result = await getProjectForApproval(projectId);
+  const [result, milestonesResult] = await Promise.all([
+    getProjectForApproval(projectId),
+    getProjectMilestones(projectId)
+  ]);
 
   if (!result.success) {
     showError('approval-detail-screen', result.message);
@@ -168,6 +171,7 @@ async function showApprovalDetail(projectId) {
   }
 
   const project = result.data;
+  const milestones = milestonesResult.success ? milestonesResult.data : [];
   const user = getCurrentUser();
 
   // 承認・差戻しボタンの表示制御
@@ -331,6 +335,9 @@ async function showApprovalDetail(projectId) {
           編集費合計金額: ¥${formatNumber(project.estimate_total || 0)}
         </div>
       </div>
+
+      <!-- 進捗マイルストーン（承認画面では閲覧のみ） -->
+      ${buildMilestoneSection(milestones, project.project_id, { editable: false })}
 
       <!-- 編集目標時間と実働編集時間 -->
       <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">編集目標時間と実働編集時間</h3>

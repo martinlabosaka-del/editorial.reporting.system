@@ -23,6 +23,7 @@
 | 8 | `migrations/020_fix_rls_policies.sql` | 2026-08-11 |
 | 9 | `migrations/021_admin_reset_password.sql` | 2026-08-11 |
 | 10 | `migrations/022_add_estimate_grand_total.sql` | 2026-08-11 |
+| 11 | `migrations/023_recalculate_target_hours.sql` | 2026-08-11 |
 
 `00_setup_all.sql` は `01`〜`05` をまとめた初期構築用です。
 新規構築では `00` のみ、既存DBへは `01` 以降を個別に適用します。
@@ -31,7 +32,7 @@
 
 ## 今後のルール
 
-新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `023_`）。
+新しいSQLは **`migrations/` に3桁番号** で追加してください（次は `024_`）。
 `supabase/` 直下の2桁番号は追加しません。
 
 ## 既知の注意点

@@ -620,8 +620,28 @@ async function getMultipleProjectMilestones(projectUuids) {
   }
 }
 
+// confirmed_by / memo は後から追加したカラム（19番・20番のSQL）。
+// 未適用の環境ではこれらを外して再試行するため、名前をまとめておく。
+const OPTIONAL_MILESTONE_COLUMNS = ['confirmed_by', 'memo'];
+
+function stripOptionalMilestoneColumns(row) {
+  const copy = { ...row };
+  OPTIONAL_MILESTONE_COLUMNS.forEach(column => delete copy[column]);
+  return copy;
+}
+
 /**
- * マイルストーン一括保存（delete + re-insert）
+ * マイルストーン保存（差分更新）
+ *
+ * 以前は「その案件の工程を全削除 → 画面の内容を全INSERT」だったが、
+ * DELETEとINSERTが別々の通信のため、INSERTに失敗すると工程が全部消えていた。
+ * 保存のたびにidと登録日時が変わるという問題もあった。
+ *
+ * 今は現在のDBの内容と画面の内容を突き合わせて、
+ *   idがあり中身が変わった行 → UPDATE（変わっていない行は何もしない）
+ *   idが無い行               → INSERT
+ *   画面から消えた行         → DELETE
+ * を出し分ける。1行だけ直したときはUPDATEが1本飛ぶだけになる。
  */
 async function saveProjectMilestones(projectId, milestones) {
   try {
@@ -636,43 +656,91 @@ async function saveProjectMilestones(projectId, milestones) {
       return { success: false, message: '案件が見つかりません' };
     }
 
-    // 既存を削除
-    await supabase
+    // 差分の基準になる、現在のDBの内容
+    const { data: existingRows, error: fetchError } = await supabase
       .from('project_milestones')
-      .delete()
+      .select('*')
       .eq('project_id', project.id);
 
-    // 新しいデータを挿入
-    if (milestones.length > 0) {
-      const rows = milestones.map((m, index) => ({
-        project_id: project.id,
+    if (fetchError) {
+      return handleSupabaseError(fetchError, 'saveProjectMilestones');
+    }
+
+    const existing = existingRows || [];
+    const existingById = new Map(existing.map(m => [m.id, m]));
+
+    // 画面に残っていないidが削除対象
+    const keptIds = new Set(milestones.map(m => m.id).filter(Boolean));
+    const idsToDelete = existing.filter(m => !keptIds.has(m.id)).map(m => m.id);
+
+    const rowsToInsert = [];
+    const rowsToUpdate = [];
+
+    milestones.forEach((m, index) => {
+      const values = {
         milestone_name: m.milestone_name,
         planned_date: m.planned_date || null,
         completed_date: m.completed_date || null,
         confirmed_by: m.confirmed_by || null,
         memo: m.memo || null,
         display_order: index
-      }));
+      };
 
+      // idはあるが対応するレコードが無い場合（他の人が消した等）は
+      // 更新できないので、新規として入れ直す
+      const current = m.id ? existingById.get(m.id) : null;
+      if (!current) {
+        rowsToInsert.push({ project_id: project.id, ...values });
+        return;
+      }
+
+      const changed = Object.keys(values).some(key => (current[key] ?? null) !== values[key]);
+      if (changed) {
+        rowsToUpdate.push({ id: m.id, values: values });
+      }
+    });
+
+    if (idsToDelete.length > 0) {
+      const { error } = await supabase
+        .from('project_milestones')
+        .delete()
+        .in('id', idsToDelete);
+
+      if (error) {
+        return handleSupabaseError(error, 'saveProjectMilestones(削除)');
+      }
+    }
+
+    for (const row of rowsToUpdate) {
       let { error } = await supabase
         .from('project_milestones')
-        .insert(rows);
+        .update(row.values)
+        .eq('id', row.id);
 
-      // confirmed_by/memoカラムが未追加の場合はシンプルな行で再試行
       if (error) {
-        const simpleRows = milestones.map((m, index) => ({
-          project_id: project.id,
-          milestone_name: m.milestone_name,
-          planned_date: m.planned_date || null,
-          completed_date: m.completed_date || null,
-          display_order: index
-        }));
         ({ error } = await supabase
           .from('project_milestones')
-          .insert(simpleRows));
+          .update(stripOptionalMilestoneColumns(row.values))
+          .eq('id', row.id));
 
         if (error) {
-          return handleSupabaseError(error, 'saveProjectMilestones');
+          return handleSupabaseError(error, 'saveProjectMilestones(更新)');
+        }
+      }
+    }
+
+    if (rowsToInsert.length > 0) {
+      let { error } = await supabase
+        .from('project_milestones')
+        .insert(rowsToInsert);
+
+      if (error) {
+        ({ error } = await supabase
+          .from('project_milestones')
+          .insert(rowsToInsert.map(stripOptionalMilestoneColumns)));
+
+        if (error) {
+          return handleSupabaseError(error, 'saveProjectMilestones(追加)');
         }
       }
     }
@@ -963,6 +1031,50 @@ async function deletePdfFromStorage(filePath) {
 // ========================================
 
 /**
+ * 見積内訳から「編集費合計」と「編集目標時間」を算出する
+ *
+ * 目標時間は評価の主軸（目標と実働の差）に直結するため、
+ * 案件の新規登録時（saveProject）と更新時（updateProject）の
+ * 両方から必ずこの関数を通して算出する。
+ * 片方だけで計算すると、見積を修正しても目標時間が古いままになる。
+ *
+ * @param {Array} estimateBreakdown - [{ estimate_item_id, amount }, ...]
+ *        estimate_item_id は edit_items の edit_item_id（TEXT）またはUUID。
+ *        ※ 見積内訳が参照するマスタは edit_items（命名と参照先が逆転している）
+ * @returns {{ estimateTotal: number, targetHours: number }} targetHoursは分単位
+ */
+async function calculateEstimateTotals(estimateBreakdown) {
+  const result = { estimateTotal: 0, targetHours: 0 };
+
+  if (!Array.isArray(estimateBreakdown)) return result;
+
+  result.estimateTotal = estimateBreakdown.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+  for (const item of estimateBreakdown) {
+    if (!item.estimate_item_id || !item.amount) continue;
+
+    // 見積項目の時給を取得（TEXTのIDで渡ってくる場合とUUIDで渡ってくる場合がある）
+    const isUuid = typeof item.estimate_item_id === 'string' &&
+      item.estimate_item_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+    const { data: editItem } = await supabase
+      .from('edit_items')
+      .select('hourly_rate')
+      .eq(isUuid ? 'id' : 'edit_item_id', item.estimate_item_id)
+      .single();
+
+    const hourlyRate = editItem ? editItem.hourly_rate : 0;
+
+    // 編集目標時間: (金額 ÷ 時給) × 60分
+    if (hourlyRate > 0) {
+      result.targetHours += Math.round((item.amount / hourlyRate) * 60);
+    }
+  }
+
+  return result;
+}
+
+/**
  * プロジェクト保存
  */
 async function saveProject(projectData) {
@@ -1036,47 +1148,8 @@ async function saveProject(projectData) {
       }
     }
 
-    // 見積合計と編集目標時間を計算
-    let estimateTotal = 0;
-    let targetHours = 0; // 分単位
-
-    if (projectData.estimate_breakdown && Array.isArray(projectData.estimate_breakdown)) {
-      estimateTotal = projectData.estimate_breakdown.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-      // 各見積項目の時給を取得して編集目標時間を個別に計算
-      for (const item of projectData.estimate_breakdown) {
-        if (item.estimate_item_id && item.amount) {
-          // edit_item_idからUUIDと時給を取得
-          let hourlyRate = 0;
-
-          if (typeof item.estimate_item_id === 'string' && !item.estimate_item_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const { data: editItem } = await supabase
-              .from('edit_items')
-              .select('hourly_rate')
-              .eq('edit_item_id', item.estimate_item_id)
-              .single();
-            if (editItem) {
-              hourlyRate = editItem.hourly_rate;
-            }
-          } else {
-            // UUIDの場合は直接取得
-            const { data: editItem } = await supabase
-              .from('edit_items')
-              .select('hourly_rate')
-              .eq('id', item.estimate_item_id)
-              .single();
-            if (editItem) {
-              hourlyRate = editItem.hourly_rate;
-            }
-          }
-
-          // 編集目標時間を計算: (金額 ÷ 時給) × 60分
-          if (hourlyRate > 0) {
-            targetHours += Math.round((item.amount / hourlyRate) * 60);
-          }
-        }
-      }
-    }
+    // 見積合計と編集目標時間を計算（分単位）
+    const { estimateTotal, targetHours } = await calculateEstimateTotals(projectData.estimate_breakdown);
 
     // プロジェクトID生成
     const { data: projectId } = await supabase.rpc('generate_project_id');
@@ -1242,6 +1315,14 @@ async function updateProject(projectData) {
       }
     }
 
+    // 見積内訳が渡された場合は、編集費合計と編集目標時間を再計算する。
+    // ここを飛ばすと、案件詳細登録で見積内訳を直しても目標時間が
+    // 新規登録時の値のまま残り、「目標と実働の差」が誤った値になる。
+    const hasBreakdown = Array.isArray(projectData.estimate_breakdown);
+    const recalculated = hasBreakdown
+      ? await calculateEstimateTotals(projectData.estimate_breakdown)
+      : null;
+
     // idまたはproject_idで更新対象を特定
     const isUuid = projectData.id && projectData.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
@@ -1272,28 +1353,38 @@ async function updateProject(projectData) {
       };
     }
 
+    const updatePayload = {
+      project_name: projectData.project_name,
+      agency_name: projectData.agency_name,
+      delivery_date: projectData.delivery_date,
+      actual_delivery_date: projectData.actual_delivery_date,
+      main_editor: mainEditorUuid,
+      sub_editors: subEditorsUuids,
+      director: directorUuid,
+      genres: projectData.genres || [],
+      technologies: projectData.technologies || [],
+      estimate_pdf_url: estimatePdfUrl,
+      estimate_number: projectData.estimate_number,
+      estimate_total: projectData.estimate_total,
+      estimate_grand_total: projectData.estimate_grand_total ?? null,
+      file_storage_url: projectData.file_storage_url,
+      reflection: projectData.reflection,
+      main_editor_message: projectData.main_editor_message,
+      other_notes: projectData.other_notes,
+      assigned_leader: assignedLeaderUuid
+    };
+
+    // 見積内訳から算出し直した値で上書きする。
+    // 画面から送られてくる estimate_total ではなく、内訳の再計算結果を正とする。
+    if (recalculated) {
+      updatePayload.estimate_total = recalculated.estimateTotal;
+      updatePayload.target_hours = recalculated.targetHours;
+      console.log('目標時間を再計算:', recalculated);
+    }
+
     const { data, error } = await supabase
       .from('projects')
-      .update({
-        project_name: projectData.project_name,
-        agency_name: projectData.agency_name,
-        delivery_date: projectData.delivery_date,
-        actual_delivery_date: projectData.actual_delivery_date,
-        main_editor: mainEditorUuid,
-        sub_editors: subEditorsUuids,
-        director: directorUuid,
-        genres: projectData.genres || [],
-        technologies: projectData.technologies || [],
-        estimate_pdf_url: estimatePdfUrl,
-        estimate_number: projectData.estimate_number,
-        estimate_total: projectData.estimate_total,
-        estimate_grand_total: projectData.estimate_grand_total ?? null,
-        file_storage_url: projectData.file_storage_url,
-        reflection: projectData.reflection,
-        main_editor_message: projectData.main_editor_message,
-        other_notes: projectData.other_notes,
-        assigned_leader: assignedLeaderUuid
-      })
+      .update(updatePayload)
       .eq(isUuid ? 'id' : 'project_id', isUuid ? projectData.id : projectData.project_id)
       .select();
 
@@ -1317,8 +1408,10 @@ async function updateProject(projectData) {
     console.log('プロジェクト更新成功:', updatedProject);
 
     // 見積内訳を更新（既存を削除して再登録）
+    // 内訳が空になった場合も削除は行う。ここで抜けると、再計算した目標時間が0なのに
+    // 内訳の行だけが残り、画面の表示と目標時間が食い違う。
     console.log('見積内訳データ:', projectData.estimate_breakdown);
-    if (projectData.estimate_breakdown && projectData.estimate_breakdown.length > 0) {
+    if (hasBreakdown) {
       // 既存の見積内訳を削除
       const { error: deleteError } = await supabase
         .from('estimate_breakdown')

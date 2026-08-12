@@ -746,9 +746,24 @@ function renderProjectSearchResults(projects) {
  */
 /**
  * マイルストーンセクションHTML生成
+ *
+ * options.editable  … 完了/取消ボタンを出すか（既定: true）
+ *                     承認詳細など閲覧専用の画面では false を渡す
+ *
+ * 工程が0件でも見出しと案内文は表示する。
+ * 「セクションごと消える」と登録漏れなのか不具合なのか分からないため。
  */
-function buildMilestoneSection(milestones, projectId) {
-  if (!milestones || milestones.length === 0) return '';
+function buildMilestoneSection(milestones, projectId, options = {}) {
+  const editable = options.editable !== false;
+  const heading = '<h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>';
+
+  if (!milestones || milestones.length === 0) {
+    const hint = editable ? '案件編集画面の「工程追加」から登録できます。' : '';
+    return `
+      ${heading}
+      <p style="color: #999; margin: 0 0 10px 0;">工程が未登録です。${hint}</p>
+    `;
+  }
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -814,6 +829,10 @@ function buildMilestoneSection(milestones, projectId) {
     }
     const btnClass = m.completed_date ? 'btn-secondary' : 'btn-primary';
     const btnLabel = m.completed_date ? '取消' : '完了にする';
+    const actionCell = editable ? `
+        <td style="padding:10px;text-align:center;">
+          <button class="btn btn-sm ${btnClass}" onclick="handleToggleMilestone('${m.id}', '${projectId}')">${btnLabel}</button>
+        </td>` : '';
     const reviewerName = m.confirmed_by_name ? escapeHtml(m.confirmed_by_name) : '-';
     const memoText = m.memo ? escapeHtml(m.memo) : '-';
     const parsed = splitMilestoneName(m.milestone_name);
@@ -825,16 +844,13 @@ function buildMilestoneSection(milestones, projectId) {
         <td style="padding:10px;">${memoText}</td>
         <td style="padding:10px;text-align:center;">${m.planned_date || '-'}</td>
         <td style="padding:10px;text-align:center;">${m.completed_date || '-'}</td>
-        <td style="padding:10px;text-align:center;">${statusBadge}</td>
-        <td style="padding:10px;text-align:center;">
-          <button class="btn btn-sm ${btnClass}" onclick="handleToggleMilestone('${m.id}', '${projectId}')">${btnLabel}</button>
-        </td>
+        <td style="padding:10px;text-align:center;">${statusBadge}</td>${actionCell}
       </tr>
     `;
   }).join('');
 
   return `
-    <h3 style="margin: 20px 0 15px 0; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;">進捗マイルストーン</h3>
+    ${heading}
     <div class="milestone-stepper">${stepperHtml}</div>
     <table style="width:100%;border-collapse:collapse;margin-top:15px;">
       <thead>
@@ -846,7 +862,7 @@ function buildMilestoneSection(milestones, projectId) {
           <th style="padding:10px;text-align:center;">予定日</th>
           <th style="padding:10px;text-align:center;">完了日</th>
           <th style="padding:10px;text-align:center;">状態</th>
-          <th style="padding:10px;text-align:center;">操作</th>
+          ${editable ? '<th style="padding:10px;text-align:center;">操作</th>' : ''}
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>

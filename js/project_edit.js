@@ -272,10 +272,14 @@ async function showProjectEditScreen(projectId) {
   screen.innerHTML = html;
 
   // マイルストーンを復元
+  // 0件のときも空行を1本出す（見積内訳と同じ挙動）。
+  // 何も無いと入力欄の存在に気づかず、工程が未登録のままになりやすいため。
   if (milestones.length > 0) {
     milestones.forEach(m => {
-      addEditMilestoneRow({ name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '', confirmed_by: m.confirmed_by || '', memo: m.memo || '' });
+      addEditMilestoneRow({ id: m.id, name: m.milestone_name, planned_date: m.planned_date || '', completed_date: m.completed_date || '', confirmed_by: m.confirmed_by || '', memo: m.memo || '' });
     });
+  } else {
+    addEditMilestoneRow();
   }
 
   // 見積内訳を復元
@@ -366,6 +370,13 @@ function addEditMilestoneRow(data = null) {
   const row = document.createElement('div');
   row.className = 'milestone-edit-row';
   row.style.cssText = 'display: flex; gap: 10px; margin-bottom: 8px; align-items: center;';
+
+  // 既存レコードのidを行に持たせる。
+  // 保存時にこのidで「更新する行」と「新しく追加された行」を見分ける。
+  // 画面で追加した行にはidが無いので、そのままINSERT対象になる。
+  if (data && data.id) {
+    row.dataset.milestoneId = data.id;
+  }
 
   // 既存データの解析
   let parsed = { type: '', number: '' };
@@ -844,6 +855,7 @@ async function saveProjectEdit() {
   // マイルストーン
   const milestoneRows = document.querySelectorAll('#edit-milestones-list .milestone-edit-row');
   const milestones = [];
+  let skippedMilestoneRows = 0;
   milestoneRows.forEach(row => {
     const name = getMilestoneNameFromRow(row);
     const plannedDate = row.querySelector('.milestone-planned-date').value;
@@ -851,9 +863,24 @@ async function saveProjectEdit() {
     const confirmedBy = row.querySelector('.milestone-reviewer').value || null;
     const memo = row.querySelector('.milestone-memo').value.trim() || null;
     if (name) {
-      milestones.push({ milestone_name: name, planned_date: plannedDate, completed_date: completedDate, confirmed_by: confirmedBy, memo: memo });
+      milestones.push({ id: row.dataset.milestoneId || null, milestone_name: name, planned_date: plannedDate, completed_date: completedDate, confirmed_by: confirmedBy, memo: memo });
+    } else if (plannedDate || completedDate || confirmedBy || memo) {
+      // 工程タイプが未選択だと工程名が作れず、この行は保存されない。
+      // 何も入力していない空行（既定で1本出る）は数えない。
+      skippedMilestoneRows++;
     }
   });
+
+  if (skippedMilestoneRows > 0) {
+    const proceed = confirm(
+      `進捗マイルストーンに、工程タイプが未選択の行が${skippedMilestoneRows}件あります。\n` +
+      'この行は保存されず、入力した日付やメモは失われます。\n\n' +
+      'このまま保存しますか？'
+    );
+    if (!proceed) {
+      return { success: false, message: '工程タイプが未選択のため保存を中止しました' };
+    }
+  }
 
   showLoading('project-edit-screen');
 
@@ -863,7 +890,20 @@ async function saveProjectEdit() {
   ]);
 
   if (result.success) {
-    alert('案件を保存しました。');
+    if (milestoneResult && milestoneResult.success) {
+      alert('案件を保存しました。');
+    } else {
+      // 黙って成功扱いにすると、工程だけ保存されていない状態に気づけない。
+      // 差分更新なので既存の工程は残っているが、途中まで反映されている
+      // 可能性はあるため、画面を開き直して確認してもらう。
+      console.error('マイルストーンの保存に失敗しました:', milestoneResult);
+      alert(
+        '案件は保存しましたが、進捗マイルストーンの保存に失敗しました。\n' +
+        '今回の変更が一部しか反映されていない可能性があります。\n' +
+        'お手数ですが案件編集画面で工程の内容をご確認ください。\n\n' +
+        '詳細: ' + (milestoneResult?.message || '不明なエラー')
+      );
+    }
     showProjectDetail(projectId);
   } else {
     showError('project-edit-screen', result.message);
