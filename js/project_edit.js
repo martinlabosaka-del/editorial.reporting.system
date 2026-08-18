@@ -90,10 +90,12 @@ async function showProjectEditScreen(projectId) {
           </div>
           <div class="form-group">
             <label>ディレクター</label>
-            <select id="edit-director">
-              <option value="">選択してください</option>
-              ${createSelectOptions(cachedMasterData.editors, 'user_id', 'name', project.director_id)}
+            <select id="edit-director" onchange="toggleExternalDirectorName('edit-director', 'edit-external-director-name')">
+              ${createDirectorOptions(cachedMasterData.editors, project.director_id)}
             </select>
+            <input type="text" id="edit-external-director-name" placeholder="外部ディレクター名（任意）"
+              value="${escapeHtml(project.external_director_name || '')}"
+              style="display: ${project.is_external_director ? 'block' : 'none'}; margin-top: 8px;">
           </div>
         </div>
 
@@ -246,7 +248,6 @@ async function showProjectEditScreen(projectId) {
         <div class="form-group">
           <label>申請上長選択 <span style="color: red;">*</span></label>
           <select id="edit-assigned-leader" required>
-            <option value="">選択してください</option>
             ${createSelectOptions(cachedMasterData.users.filter(u => u.role === 'leader'), 'user_id', 'name', project.assigned_leader)}
           </select>
         </div>
@@ -753,7 +754,13 @@ async function saveProjectEdit() {
   const deliveryDate = document.getElementById('edit-delivery-date').value;
   const actualDeliveryDate = document.getElementById('edit-actual-delivery-date').value;
   const mainEditor = document.getElementById('edit-main-editor').value;
-  const director = document.getElementById('edit-director').value;
+  // ディレクターは社内ユーザーのほかに「外部」を選べる
+  const directorValue = document.getElementById('edit-director').value;
+  const isExternalDirector = directorValue === EXTERNAL_DIRECTOR_VALUE;
+  const director = isExternalDirector ? '' : directorValue;
+  const externalDirectorName = isExternalDirector
+    ? document.getElementById('edit-external-director-name').value.trim()
+    : '';
   const fileStorageUrl = document.getElementById('edit-file-storage-url').value;
   const estimateNumber = document.getElementById('edit-estimate-number').value;
   const reflection = document.getElementById('edit-reflection').value;
@@ -831,6 +838,8 @@ async function saveProjectEdit() {
     main_editor: mainEditor,
     sub_editors: subEditors,
     director: director,
+    is_external_director: isExternalDirector,
+    external_director_name: externalDirectorName,
     genres: genres,
     technologies: technologies,
     estimate_pdf_url: currentEditingProject?.estimate_pdf_url, // 既存のPDF URLを保持

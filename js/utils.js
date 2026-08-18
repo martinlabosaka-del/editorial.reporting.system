@@ -239,6 +239,42 @@ function createSelectOptions(items, valueKey, labelKey, selectedValue = '') {
 }
 
 /**
+ * ディレクター選択欄を生成
+ * 社内の編集者に加えて「外部」を選べるようにする
+ */
+function createDirectorOptions(editors, selectedValue = '') {
+  const isExternal = selectedValue === EXTERNAL_DIRECTOR_VALUE;
+  return createSelectOptions(editors, 'user_id', 'name', selectedValue)
+    + `<option value="${EXTERNAL_DIRECTOR_VALUE}" ${isExternal ? 'selected' : ''}>外部</option>`;
+}
+
+/**
+ * 「外部」を選んだときだけ氏名の入力欄を表示する
+ * 外部以外に切り替えたときは入力済みの氏名を消す
+ */
+function toggleExternalDirectorName(selectId, inputId) {
+  const select = document.getElementById(selectId);
+  const input = document.getElementById(inputId);
+  if (!select || !input) return;
+
+  const isExternal = select.value === EXTERNAL_DIRECTOR_VALUE;
+  input.style.display = isExternal ? 'block' : 'none';
+  if (!isExternal) input.value = '';
+}
+
+/**
+ * 画面表示用のディレクター名
+ * 外部は氏名が任意入力なので、未入力なら「外部」とだけ表示する
+ */
+function formatDirectorName(project) {
+  if (project.is_external_director) {
+    const name = (project.external_director_name || '').trim();
+    return name ? `外部（${name}）` : '外部';
+  }
+  return project.director_user?.name || '';
+}
+
+/**
  * チェックボックス生成
  */
 function createCheckboxes(items, valueKey, labelKey, selectedValues = []) {

@@ -46,6 +46,10 @@ const CONFIG = {
   }
 };
 
+// ディレクター欄で「外部」を選んだときの値
+// 社内ユーザーのuser_id（例：yamada.taro）と衝突しない形にしている
+const EXTERNAL_DIRECTOR_VALUE = '__external__';
+
 // グローバル変数としてエクスポート
 const API_BASE_URL = CONFIG.API_URL;
 const STORAGE_KEYS = CONFIG.STORAGE_KEYS;

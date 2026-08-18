@@ -1128,6 +1128,12 @@ async function saveProject(projectData) {
       directorUuid = projectData.director;
     }
 
+    // 外部ディレクターの場合、directorは空にして氏名（任意）だけを保存する
+    const isExternalDirector = projectData.is_external_director === true;
+    const externalDirectorName = isExternalDirector
+      ? (projectData.external_director_name || '').trim() || null
+      : null;
+
     // sub_editorsの変換
     let subEditorsUuids = [];
     if (projectData.sub_editors && projectData.sub_editors.length > 0) {
@@ -1185,7 +1191,9 @@ async function saveProject(projectData) {
         delivery_date: deliveryDate,
         main_editor: mainEditorUuid,
         sub_editors: subEditorsUuids,
-        director: directorUuid,
+        director: isExternalDirector ? null : directorUuid,
+        is_external_director: isExternalDirector,
+        external_director_name: externalDirectorName,
         genres: projectData.genres || [],
         technologies: projectData.technologies || [],
         estimate_pdf_url: estimatePdfUrl,
@@ -1268,6 +1276,12 @@ async function updateProject(projectData) {
     } else if (projectData.director && projectData.director.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
       directorUuid = projectData.director;
     }
+
+    // 外部ディレクターの場合、directorは空にして氏名（任意）だけを保存する
+    const isExternalDirector = projectData.is_external_director === true;
+    const externalDirectorName = isExternalDirector
+      ? (projectData.external_director_name || '').trim() || null
+      : null;
 
     let subEditorsUuids = [];
     if (projectData.sub_editors && projectData.sub_editors.length > 0) {
@@ -1360,7 +1374,9 @@ async function updateProject(projectData) {
       actual_delivery_date: projectData.actual_delivery_date,
       main_editor: mainEditorUuid,
       sub_editors: subEditorsUuids,
-      director: directorUuid,
+      director: isExternalDirector ? null : directorUuid,
+      is_external_director: isExternalDirector,
+      external_director_name: externalDirectorName,
       genres: projectData.genres || [],
       technologies: projectData.technologies || [],
       estimate_pdf_url: estimatePdfUrl,
@@ -1714,7 +1730,7 @@ async function searchProjects(searchParams) {
       // agency_nameはprojectsテーブルのものを優先、なければclientsテーブルから
       agency_name: project.agency_name || project.client?.agency_name || '',
       main_editor_name: project.main_editor_user?.name || '',
-      director_name: project.director_user?.name || ''
+      director_name: formatDirectorName(project)
     }));
 
     return createSuccessResponse(transformedData);
@@ -1871,8 +1887,10 @@ async function getProjectDetail(projectId) {
     }
     project.main_editor_name = project.main_editor_user?.name || '';
     project.main_editor_id = project.main_editor_user?.user_id || '';
-    project.director_name = project.director_user?.name || '';
-    project.director_id = project.director_user?.user_id || null;
+    project.director_name = formatDirectorName(project);
+    project.director_id = project.is_external_director
+      ? EXTERNAL_DIRECTOR_VALUE
+      : (project.director_user?.user_id || null);
     project.assigned_leader = project.assigned_leader_user?.user_id || null;
     project.assigned_leader_name = project.assigned_leader_user?.name || null;
 

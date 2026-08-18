@@ -118,9 +118,10 @@ async function showProjectRegistration() {
 
         <div class="form-group">
           <label>ディレクター</label>
-          <select id="director">
-            ${createSelectOptions(cachedMasterData.editors, 'user_id', 'name')}
+          <select id="director" onchange="toggleExternalDirectorName('director', 'external-director-name')">
+            ${createDirectorOptions(cachedMasterData.editors)}
           </select>
+          <input type="text" id="external-director-name" placeholder="外部ディレクター名（任意）" style="display: none; margin-top: 8px;">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -368,6 +369,10 @@ async function handleProjectSubmit() {
     technologies.push(cb.value);
   });
 
+  // ディレクターは社内ユーザーのほかに「外部」を選べる
+  const directorValue = document.getElementById('director').value;
+  const isExternalDirector = directorValue === EXTERNAL_DIRECTOR_VALUE;
+
   const projectData = {
     client_id: clientId,
     agency_name: document.getElementById('agency-name').value,
@@ -375,7 +380,11 @@ async function handleProjectSubmit() {
     delivery_date: document.getElementById('delivery-date').value,
     main_editor: document.getElementById('main-editor').value,
     sub_editors: subEditors,
-    director: document.getElementById('director').value,
+    director: isExternalDirector ? '' : directorValue,
+    is_external_director: isExternalDirector,
+    external_director_name: isExternalDirector
+      ? document.getElementById('external-director-name').value.trim()
+      : '',
     genres: genres,
     technologies: technologies,
     estimate_number: document.getElementById('estimate-number').value,
