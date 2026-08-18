@@ -2004,6 +2004,36 @@ async function saveLeaderEvaluation(evaluationData) {
 // ========================================
 
 /**
+ * history_idを必要な件数だけ連番で生成
+ * generate_history_idは既存データの最大値から採番するため、
+ * 挿入前に複数回呼ぶと同じIDが返る。先頭のIDだけ取得して連番を振る。
+ */
+async function generateHistoryIds(count) {
+  const { data: baseId, error: rpcError } = await supabase.rpc('generate_history_id');
+
+  if (rpcError || !baseId) {
+    console.error('generate_history_id エラー:', rpcError);
+    return null;
+  }
+
+  // 例: HIS-20260818-001 → プレフィックス「HIS-20260818-」/ 開始番号 1 / 桁数 3
+  const matched = String(baseId).match(/^(.*-)(\d+)$/);
+
+  if (!matched) {
+    console.error('history_idの形式が想定と異なります:', baseId);
+    return null;
+  }
+
+  const prefix = matched[1];
+  const digits = matched[2].length;
+  const start = parseInt(matched[2], 10);
+
+  return Array.from({ length: count }, (_, index) =>
+    prefix + String(start + index).padStart(digits, '0')
+  );
+}
+
+/**
  * 編集時間保存
  */
 async function saveEditTime(editTimeData) {
@@ -2052,19 +2082,11 @@ async function saveEditTime(editTimeData) {
           return { success: false, message: `編集項目が見つかりません: ${history.estimate_item_id}` };
         }
 
-        // history_idを生成
-        const { data: historyId, error: rpcError } = await supabase.rpc('generate_history_id');
-
-        if (rpcError) {
-          console.error('generate_history_id エラー:', rpcError);
-          return { success: false, message: 'history_idの生成に失敗しました' };
-        }
-
         // 編集時間を分単位に変換（edit_hoursは10進数の時間）
         const editTimeMinutes = Math.round(history.edit_hours * 60);
 
+        // history_idは挿入直前にまとめて採番する（ここで採番すると全行同じ値になる）
         allHistories.push({
-          history_id: historyId,
           project_id: project.id,
           date: editTimeData.edit_date,
           editor: editorUuid,
@@ -2075,17 +2097,43 @@ async function saveEditTime(editTimeData) {
       }
     }
 
-    // 一括挿入
-    const { data, error } = await supabase
-      .from('edit_history')
-      .insert(allHistories)
-      .select();
-
-    if (error) {
-      return handleSupabaseError(error, 'saveEditTime');
+    if (allHistories.length === 0) {
+      return { success: false, message: '登録する編集時間がありません' };
     }
 
-    return createSuccessResponse(data, '編集時間を登録しました');
+    // 一括挿入（history_idが他ユーザーと衝突した場合は採番からやり直す）
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const historyIds = await generateHistoryIds(allHistories.length);
+
+      if (!historyIds) {
+        return { success: false, message: 'history_idの生成に失敗しました' };
+      }
+
+      const rows = allHistories.map((history, index) => ({
+        history_id: historyIds[index],
+        ...history
+      }));
+
+      const { data, error } = await supabase
+        .from('edit_history')
+        .insert(rows)
+        .select();
+
+      if (!error) {
+        return createSuccessResponse(data, '編集時間を登録しました');
+      }
+
+      lastError = error;
+
+      // 重複以外のエラーはリトライしても解消しない
+      if (error.code !== '23505') {
+        break;
+      }
+    }
+
+    return handleSupabaseError(lastError, 'saveEditTime');
   } catch (error) {
     return handleSupabaseError(error, 'saveEditTime');
   }
